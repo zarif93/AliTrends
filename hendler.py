@@ -1,18 +1,20 @@
-import openai
+from openai import OpenAI
 import database
 import pandas as pd
 import time
 import re
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
+
 ai_api = os.getenv("AI_API")
 
-def setpost(data):
-    openai.api_key = ai_api
+client = OpenAI(api_key=ai_api)
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+def setpost(data):
+
+    response = client.chat.completions.create(model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a creative and engaging social media content creator. Your posts should be clear, captivating, and easy to read."},
             {"role": "user", "content": f"""
@@ -38,7 +40,7 @@ after the link use only the url
 """},
         ]
     )
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 def extract_number(st):
     if str(st) == 'nan':
@@ -48,9 +50,7 @@ def extract_number(st):
 
 def setcategory(data):
 
-    openai.api_key = ai_api
-
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "user", "content": f"""
@@ -73,7 +73,7 @@ What is the category for this product?
              """},
         ]
     )
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 def insetdata(data):
 
