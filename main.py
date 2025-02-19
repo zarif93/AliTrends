@@ -50,11 +50,11 @@ while True:
             f_id = os.getenv(face)
 
         post = haspost(data)
-        # post to telegram 
+        # post to telegram in english 
         telegrampost.send_photo_and_data(post,id)
         print(f'post to telegram productid {data[0]}')
 
-        # post to face book 
+        # post to face book in english 
         if num % 2 == 0:
             # sec time to facebook
             if f_id == 'false':
