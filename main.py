@@ -81,7 +81,7 @@ while True:
                 else:
                     print(f'post to facebook productid {data[0]}')
                     facebook.facepost(post,f_id)
-            #time.sleep(30)
+            time.sleep(30)
     num = num + 1
 
     #  need to sleep 3600 sec
