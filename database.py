@@ -16,26 +16,34 @@ cur.execute("""
             Category text
 
             )""")
-cur.execute("""
-        CREATE TABLE IF NOT EXISTS posts(
-        ProductId text UNIQUE, 
-        post text
-        )""")
+
+def poststable(leng):
+
+    cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {leng}posts(
+            ProductId text UNIQUE, 
+            post text
+            )""")
 
 #print(cur.execute(f"SELECT rowid FROM products ORDER BY rowid ASC").fetchall())
 #print(cur.execute(f"SELECT rowid,* FROM posts").fetchall())
 
-def insertpost(data):
+def insertpost(data, leng):
 
     try:
-        cur.execute("INSERT INTO posts (ProductId, post) VALUES(?,?) ", (data[0][0],data[1]))
+        cur.execute(f"INSERT INTO {leng}posts (ProductId, post) VALUES(?,?) ", (data[0][0],data[1]))
         con.commit()
     except Exception as e:
         print(e)
         pass
 
-def getpost(data):
-    return cur.execute(f"SELECT * FROM posts WHERE ProductId = {data}").fetchone()
+
+
+def getpost(data,leng):
+
+    poststable(leng)
+
+    return cur.execute(f"SELECT * FROM {leng}posts WHERE ProductId = {data}").fetchone()
 
 def isset(productid):
     query = "SELECT EXISTS(SELECT 1 FROM products WHERE ProductId = ?)" 

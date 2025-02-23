@@ -12,7 +12,7 @@ ai_api = os.getenv("AI_API")
 
 client = OpenAI(api_key=ai_api)
 
-def setpost(data):
+def setpost(data,leng):
 
     response = client.chat.completions.create(model="gpt-3.5-turbo",
         messages=[
@@ -35,12 +35,15 @@ Hashtags:
 Include relevant 17 hashtags. Make sure they are engaging and relevant to the target audience.
 
 Make the post feel natural and appealing, with a focus on clarity and readability.
-after the link use only the url
+
+Write to me in {leng}
 
 """},
         ]
     )
     return response.choices[0].message.content
+
+
 
 def extract_number(st):
     if str(st) == 'nan':

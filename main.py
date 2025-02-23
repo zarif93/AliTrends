@@ -8,6 +8,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+langlist ={
+    'English',
+    'Arabic',
+    'Portuguese', 
+    'French',
+    'Spanish'
+}
+
 lists = {
     'main',
     'Electronics & Technology',
@@ -21,49 +29,59 @@ lists = {
     'Security & Tools'
 }
 
-def haspost(data):
+
+def haspost(data, leng):
 
 #    IF not have post create one
-    if database.getpost(data[0]):
+    if database.getpost(data[0], leng):
         post = (data[6],data[1],data[2],database.getpost(data[0])[1])
         return post
     else:
-        setpost = hendler.setpost(data)
+        setpost = hendler.setpost(data, leng)
         post = (data[6],data[1],data[2],setpost)
         data = (data,setpost)
-        database.insertpost(data)
+        database.insertpost(data, leng)
         return post 
      
 num = 1
 while True:
 
-    for list in lists:
-        face = 'Facebook '+list
-        if list == 'main':
-            data = database.selectrandom(False)
-            id = os.getenv('main')
-            f_id = os.getenv('Facebook main')
-        else:
-            data = database.selectrandom(list)
-            id = os.getenv(data[7])
-            face = 'Facebook '+list
-            f_id = os.getenv(face)
+    for leng in langlist:
 
-        post = haspost(data)
-        # post to telegram in english 
-        telegrampost.send_photo_and_data(post,id)
-        print(f'post to telegram productid {data[0]}')
+        for list in lists:
 
-        # post to face book in english 
-        if num % 2 == 0:
-            # sec time to facebook
-            if f_id == 'false':
-                print(face)
-                print('no has page')
+            face = leng + ' Facebook '+list
+
+            lng = leng +' '+ list
+
+            if lng == leng+' main':
+                data = database.selectrandom(False)
+                id = os.getenv(lng)
+                f_id = os.getenv(face)
             else:
-                print(f'post to facebook productid {data[0]}')
-                facebook.facepost(post,f_id)
-        time.sleep(30)
+                data = database.selectrandom(list)
+                id = os.getenv(lng)
+                f_id = os.getenv(face)
+
+            # post to telegram 
+            if id == 'false':
+                print(lng)
+                print(id)
+            else:
+                post = haspost(data, leng)
+                telegrampost.send_photo_and_data(post,id)
+                print(f'post to telegram productid {data[0]}')
+
+            # post to face book 
+            if num % 2 == 0:
+                # sec time to facebook
+                if f_id == 'false':
+                    print(face)
+                    print('no has page')
+                else:
+                    print(f'post to facebook productid {data[0]}')
+                    facebook.facepost(post,f_id)
+            #time.sleep(30)
     num = num + 1
 
     #  need to sleep 3600 sec
