@@ -45,6 +45,7 @@ def haspost(data, leng):
      
 num = 1
 while True:
+    telegrampost.chacker('start sending massages')
 
     for leng in langlist:
 
@@ -66,10 +67,12 @@ while True:
             # post to telegram 
             if id == 'false':
                 print(f'{lng} has no telegram channel')
+                t = 5
             else:
                 post = haspost(data, leng)
                 telegrampost.send_photo_and_data(post,id)
                 print(f'{lng} post to telegram productid {data[0]}')
+                t = 30
 
             # post to face book 
             if num % 2 == 0:
@@ -79,9 +82,10 @@ while True:
                 else:
                     print(f'{lng} post to facebook productid {data[0]}')
                     facebook.facepost(post,f_id)
-            time.sleep(30)
+            time.sleep(t)
     num = num + 1
 
     #  need to sleep 3600 sec
     print('going to sleep for 1 hour')
+    telegrampost.chacker('stop sending massages')
     time.sleep(2700)

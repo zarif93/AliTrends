@@ -10,6 +10,10 @@ load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
+def chacker(mass):
+    chat_id = '7902249875'
+    bot.send_message(chat_id, mass)
+
 def send_photo_and_data(data,id):
 
     #print(data[6])
@@ -29,7 +33,7 @@ def send_photo_and_data(data,id):
 
     # Create media objects correctly
     photo = data[1]
-    
+
     try:
         bot.send_photo(chat_id=c_id, photo=photo, caption=caption, reply_markup=keyboard, disable_notification=True)
     except:
