@@ -29,23 +29,28 @@ def send_photo_and_data(data,id):
 
     # Create media objects correctly
     media_group = []
-    
-    if data[2].startswith('http'):
-        photo = InputMediaPhoto(data[1], caption="This is a photo caption.")
-        video = InputMediaVideo(data[2], caption="This is a video caption.")
-        try:
-             # Send media group (photo + video)
-            bot.send_media_group(chat_id=c_id, media=[photo, video])
+    photo = data[1]
+    try:
+        bot.send_photo(chat_id=c_id, photo=photo, caption=caption, reply_markup=keyboard)
+    except:
+        pass
 
-            # Send the caption separately (since send_media_group only allows one caption)
-            bot.send_message(chat_id=c_id, text=caption, reply_markup=keyboard, parse_mode="HTML")
-
-        except Exception as e:
-            print(e)
-            pass
-    else:
-        photo = data[1]
-        try:
-            bot.send_photo(chat_id=c_id, photo=photo, caption=caption, reply_markup=keyboard)
-        except:
-            pass
+#    if data[2].startswith('http'):
+#        photo = InputMediaPhoto(data[1], caption="This is a photo caption.")
+#        video = InputMediaVideo(data[2], caption="This is a video caption.")
+#        try:
+#             # Send media group (photo + video)
+#            bot.send_media_group(chat_id=c_id, media=[photo, video])
+#
+#            # Send the caption separately (since send_media_group only allows one caption)
+#            bot.send_message(chat_id=c_id, text=caption, reply_markup=keyboard, parse_mode="HTML")
+#
+#        except Exception as e:
+#            print(e)
+#            pass
+#    else:
+#        photo = data[1]
+#        try:
+#            bot.send_photo(chat_id=c_id, photo=photo, caption=caption, reply_markup=keyboard)
+#        except:
+#            pass

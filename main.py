@@ -65,8 +65,7 @@ while True:
 
             # post to telegram 
             if id == 'false':
-                print(lng)
-                print(id)
+                print(f'{lng} has no telegram channel')
             else:
                 post = haspost(data, leng)
                 telegrampost.send_photo_and_data(post,id)
@@ -76,8 +75,7 @@ while True:
             if num % 2 == 0:
                 # sec time to facebook
                 if f_id == 'false':
-                    print(face)
-                    print('no has page')
+                    print(f'{face} has no Facebook page')
                 else:
                     print(f'post to facebook productid {data[0]}')
                     facebook.facepost(post,f_id)
@@ -86,4 +84,4 @@ while True:
 
     #  need to sleep 3600 sec
     print('going to sleep for 1 hour')
-    time.sleep(3600)
+    time.sleep(2700)
