@@ -69,7 +69,7 @@ while True:
             else:
                 post = haspost(data, leng)
                 telegrampost.send_photo_and_data(post,id)
-                print(f'post to telegram productid {data[0]}')
+                print(f'{lng} post to telegram productid {data[0]}')
 
             # post to face book 
             if num % 2 == 0:
@@ -77,7 +77,7 @@ while True:
                 if f_id == 'false':
                     print(f'{face} has no Facebook page')
                 else:
-                    print(f'post to facebook productid {data[0]}')
+                    print(f'{lng} post to facebook productid {data[0]}')
                     facebook.facepost(post,f_id)
             time.sleep(30)
     num = num + 1

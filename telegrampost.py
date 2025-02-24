@@ -17,7 +17,7 @@ def send_photo_and_data(data,id):
     # Create the buttons
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(text="Product Page", url=data[0]))
-    keyboard.add(InlineKeyboardButton(text="Telegram Main Channel", url="https://t.me/AliTrends_Aliexpress"))
+    #keyboard.add(InlineKeyboardButton(text="Telegram Main Channel", url="https://t.me/AliTrends_Aliexpress"))
 
     caption = data[3]
 
@@ -28,10 +28,9 @@ def send_photo_and_data(data,id):
     c_id = id
 
     # Create media objects correctly
-    media_group = []
     photo = data[1]
     try:
-        bot.send_photo(chat_id=c_id, photo=photo, caption=caption, reply_markup=keyboard)
+        bot.send_photo(chat_id=c_id, photo=photo, caption=caption, reply_markup=keyboard, disable_notification=True)
     except:
         pass
 
