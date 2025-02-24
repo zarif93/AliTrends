@@ -34,7 +34,7 @@ def haspost(data, leng):
 
 #    IF not have post create one
     if database.getpost(data[0], leng):
-        post = (data[6],data[1],data[2],database.getpost(data[0])[1])
+        post = (data[6],data[1],data[2],database.getpost(data[0], leng)[1])
         return post
     else:
         setpost = hendler.setpost(data, leng)
