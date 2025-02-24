@@ -29,6 +29,7 @@ def send_photo_and_data(data,id):
 
     # Create media objects correctly
     photo = data[1]
+    
     try:
         bot.send_photo(chat_id=c_id, photo=photo, caption=caption, reply_markup=keyboard, disable_notification=True)
     except:
