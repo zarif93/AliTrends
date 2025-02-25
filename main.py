@@ -43,12 +43,12 @@ def haspost(data, leng):
         database.insertpost(data, leng)
         return post 
      
-num = 2
+num = 1
 while True:
 
     telegrampost.chacker('start sending massages')
     pagetoken = facebook.gettoken()
-    
+
     for leng in langlist:
 
         for list in lists:
