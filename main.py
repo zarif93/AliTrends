@@ -43,10 +43,12 @@ def haspost(data, leng):
         database.insertpost(data, leng)
         return post 
      
-num = 1
+num = 2
 while True:
-    telegrampost.chacker('start sending massages')
 
+    telegrampost.chacker('start sending massages')
+    pagetoken = facebook.gettoken()
+    
     for leng in langlist:
 
         for list in lists:
@@ -81,7 +83,8 @@ while True:
                     print(f'{face} has no Facebook page')
                 else:
                     print(f'{lng} post to facebook productid {data[0]}')
-                    facebook.facepost(post,f_id)
+                    token = pagetoken.get(f_id)
+                    facebook.facepost(post, f_id, token)
             time.sleep(t)
     num = num + 1
 

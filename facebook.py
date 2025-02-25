@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-def gettoken(id):
+def gettoken():
     url = "https://graph.facebook.com/v22.0/me/accounts"
 
     params = {
@@ -12,17 +12,15 @@ def gettoken(id):
     }
 
     response = requests.get(url, params=params)
-
     # יצירת מילון עם הקשר בין ID הדף והטוקן
     page_tokens = {page['id']: page['access_token'] for page in response.json()['data']}
 
+    #return page_tokens.get('598255833361498')
+
     # גישה לטוקן של דף לפי ID
-    return page_tokens.get(id)
+    return page_tokens
 
-
-def facepost(data, id):
-
-    token = gettoken(id)
+def facepost(data, id, token):
 
     # Construct the URL for posting to the photos endpoint of a Facebook Page
     url = f"https://graph.facebook.com/{id}/photos"
