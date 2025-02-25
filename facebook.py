@@ -44,4 +44,3 @@ def facepost(data, id):
     # Print the response for debugging
     print("Response Status Code:", response.status_code)
     print("Response Text:", response.text)
-

@@ -8,15 +8,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-langlist ={
+langlist =[
     'English',
     'Arabic',
     'Portuguese', 
     'French',
     'Spanish'
-}
+]
 
-lists = {
+lists = [
     'main',
     'Electronics & Technology',
     'Fashion & Accessories',
@@ -27,7 +27,7 @@ lists = {
     'Beauty & Health',
     'Office & Education',
     'Security & Tools'
-}
+]
 
 
 def haspost(data, leng):
@@ -67,7 +67,7 @@ while True:
             # post to telegram 
             if id == 'false':
                 print(f'{lng} has no telegram channel')
-                t = 5
+                t = 1
             else:
                 post = haspost(data, leng)
                 telegrampost.send_photo_and_data(post,id)
@@ -88,4 +88,4 @@ while True:
     #  need to sleep 3600 sec
     print('going to sleep for 1 hour')
     telegrampost.chacker('stop sending massages')
-    time.sleep(2700)
+    time.sleep(3000)
