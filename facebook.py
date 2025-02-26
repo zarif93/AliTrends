@@ -34,15 +34,13 @@ def facepost(data, id, token):
     if random_word == 'feed':
         data_to_send = {
             'message': data[3],  # Concatenating message with new line
-            'link': data[1],  # The URL of the website (use the correct link URL)
+            'link': data[0],  # The URL of the website (use the correct link URL)
             }
     else:
         data_to_send = {
             'message': data[3],  # Concatenating message with new line
-            'url': data[2],  # The URL of the image (use the correct image URL)
+            'url': data[1],  # The URL of the image (use the correct image URL)
             }
-
- 
 
     # Parameters for the API request
     params = {
