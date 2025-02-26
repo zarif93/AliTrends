@@ -1,5 +1,6 @@
 import requests
 import os
+import random
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -22,16 +23,28 @@ def gettoken():
 
 def facepost(data, id, token):
 
+    words = ["feed", "photos"]
+
+    random_word = random.choice(words)
+
     # Construct the URL for posting to the photos endpoint of a Facebook Page
-    url = f"https://graph.facebook.com/{id}/photos"
+    url = f"https://graph.facebook.com/{id}/{random_word}"
 
-    # Construct the data dictionary
-    data_to_send = {
-        'message': data[0] + "\n" + data[3],  # Concatenating message with new line
-        'url': data[1],  # The URL of the image (use the correct image URL)
-    }
+    # Construct the data dictionary for posting an image with a message
+    if random_word == 'feed':
+        data_to_send = {
+            'message': data[3],  # Concatenating message with new line
+            'link': data[1],  # The URL of the website (use the correct link URL)
+            }
+    else:
+        data_to_send = {
+            'message': data[3],  # Concatenating message with new line
+            'url': data[2],  # The URL of the image (use the correct image URL)
+            }
 
-    # The parameters include the Page Access Token
+ 
+
+    # Parameters for the API request
     params = {
         'access_token': token,  # Your page access token
     }
