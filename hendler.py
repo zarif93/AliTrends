@@ -120,18 +120,3 @@ def insetdata(data):
                 )
             database.insertdatatotable(da)
             print(f'inset one more row {row[1]["ProductId"]}')
-
-data = [
-    "AS 2024 woman clothing high Stretch ribbing closed-fit wrap tops + Matte Satin dress Maxi matching sets (ship out in 1 day)",  # שם המוצר
-    "Category",  # קטגוריה
-    "Brand",  # מותג
-    "AS 2024 woman clothing high Stretch ribbing closed-fit wrap tops + Matte Satin dress Maxi matching sets (ship out in 1 day)",  # תיאור המוצר
-    "99.99",  # מחיר המוצר
-    "4.5/5",  # דירוג המוצר
-    "https://www.example.com"  # קישור למוצר
-]
-leng = "en"  # אם אתה רוצה שהפוסט יהיה באנגלית, אחרת תוכל לשים עברית
-print('test')
-post_content = setpost(data, leng)
-print('test1')
-print(post_content)
