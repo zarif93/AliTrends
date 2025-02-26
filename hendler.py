@@ -12,39 +12,56 @@ ai_api = os.getenv("AI_API")
 
 client = OpenAI(api_key=ai_api)
 
-def setpost(data,leng):
+def setpost(data, leng):
+    # תיאור מערכת ממוקד יותר
+    sysrole = """
+    You are an expert social media content creator. Your posts should be engaging, clear, and drive action. 
+    Focus on creating concise, persuasive content that resonates deeply with the target audience and sparks emotion. 
+    Ensure each post aligns with the brand's tone and voice, while strategically driving traffic and conversions. 
+    The tone should be professional yet approachable, with a sense of urgency to compel users to act.
+    """
+    
+    # יצירת הפורמט של הפוסט עם פרטי המוצר
+    prompt = f"""
+    You are a highly skilled social media content creator. Your task is to write a social media post with the following structure:
 
-    response = client.chat.completions.create(model="gpt-3.5-turbo",
+    1. **Description**: 
+    - {data[3]}  
+
+    2. **Price**: 
+    - Price: {data[4]} USD 
+    
+    3. **Rating**:
+    - Rating: {data[5]}  
+
+    4. **Link**:
+    - The link must be the only content in this section: {data[6]}  
+
+    5. **Discount**:
+    - Clearly mention the discount of up to 80%. 
+    - Use persuasive language to make the offer irresistible.
+
+    6. **Hashtags**: 
+    - Include exactly 17 relevant and engaging hashtags that are aligned with the product, sale, and target audience. 
+    - These hashtags should help generate excitement and engagement.
+
+    The post should be clear, concise, and written in a natural, easy-to-read tone.
+
+    **Please make sure to follow the structure above exactly as described.**
+    **Write the price in USD.**
+    **Please write in {leng}.**
+    """
+    
+    # יצירת בקשה ל-API
+    response = client.chat.completions.create(
+        model="gpt-4",
         messages=[
-            {"role": "system", "content": "You are a creative and engaging social media content creator. Your posts should be clear, captivating, and easy to read."},
-            {"role": "user", "content": f"""
-Create a product post with the following structure:
-Description:
-{data[3]}
-
-Price:
-{data[4]}
-
-Rating:
-{data[5]}
-
-link: 
-{data[6]}
-
-Hashtags:
-Include relevant 17 hashtags. Make sure they are engaging and relevant to the target audience.
-
-Make the post feel natural and appealing, with a focus on clarity and readability.
-
-write thr price in USD
-Write to me in {leng}
-
-"""},
+            {"role": "system", "content": sysrole},
+            {"role": "user", "content": prompt}
         ]
     )
+
     return response.choices[0].message.content
-
-
 
 def extract_number(st):
     if str(st) == 'nan':
@@ -104,3 +121,17 @@ def insetdata(data):
             database.insertdatatotable(da)
             print(f'inset one more row {row[1]["ProductId"]}')
 
+data = [
+    "AS 2024 woman clothing high Stretch ribbing closed-fit wrap tops + Matte Satin dress Maxi matching sets (ship out in 1 day)",  # שם המוצר
+    "Category",  # קטגוריה
+    "Brand",  # מותג
+    "AS 2024 woman clothing high Stretch ribbing closed-fit wrap tops + Matte Satin dress Maxi matching sets (ship out in 1 day)",  # תיאור המוצר
+    "99.99",  # מחיר המוצר
+    "4.5/5",  # דירוג המוצר
+    "https://www.example.com"  # קישור למוצר
+]
+leng = "en"  # אם אתה רוצה שהפוסט יהיה באנגלית, אחרת תוכל לשים עברית
+print('test')
+post_content = setpost(data, leng)
+print('test1')
+print(post_content)
