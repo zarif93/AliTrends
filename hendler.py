@@ -36,6 +36,7 @@ Include relevant 17 hashtags. Make sure they are engaging and relevant to the ta
 
 Make the post feel natural and appealing, with a focus on clarity and readability.
 
+write thr price in USD
 Write to me in {leng}
 
 """},
