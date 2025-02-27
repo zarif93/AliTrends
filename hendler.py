@@ -54,7 +54,7 @@ def setpost(data, leng):
     
     # יצירת בקשה ל-API
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": sysrole},
             {"role": "user", "content": prompt}
