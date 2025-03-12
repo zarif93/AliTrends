@@ -1,9 +1,8 @@
 import telebot
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto, InputMediaVideo
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from telebot.types import InputMediaPhoto, InputMediaVideo
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto, InputMediaVideo
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # הכנס את הטוקן של הבוט שלך
