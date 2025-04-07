@@ -28,18 +28,14 @@ def setpost(data, leng):
     1. **Description**: 
     - {data[3]}  
 
-    2. **Price**: 
-    - Price: {data[4]} USD 
+    2. **Discount Price**: 
+    - Discount Price: {data[4]} USD 
     
     3. **Rating**:
     - Rating: {data[5]}  
 
     4. **Link**:
     - The link must be the only content in this section: {data[6]}  
-
-    5. **Discount**:
-    - Clearly mention the discount of up to 80%. 
-    - Use persuasive language to make the offer irresistible.
 
     6. **Hashtags**: 
     - Include exactly 17 relevant and engaging hashtags that are aligned with the product, sale, and target audience. 
@@ -113,7 +109,7 @@ def insetdata(data):
                 row[1]['Image Url'], 
                 row[1]['Video Url'], 
                 row[1]['Product Desc'], 
-                extract_number(row[1]['Origin Price']), 
+                extract_number(row[1]['Discount Price']), 
                 float('%.1f' % (extract_number(row[1]['Positive Feedback'])*5/100)), 
                 row[1]['Promotion Url'],
                 setcategory(row[1]['Product Desc'])
