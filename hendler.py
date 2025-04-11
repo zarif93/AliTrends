@@ -5,6 +5,7 @@ import time
 import re
 import os
 from dotenv import load_dotenv
+import telegrampost
 
 load_dotenv()
 
@@ -49,15 +50,20 @@ def setpost(data, leng):
     """
     
     # יצירת בקשה ל-API
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": sysrole},
-            {"role": "user", "content": prompt}
-        ]
-    )
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": sysrole},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message.content
+    except OpenAI.error.OpenAIError as e:
+        telegrampost.chacker(f"OpenAI API error: {e}")
+        return None
 
-    return response.choices[0].message.content
+    
 
 def extract_number(st):
     if str(st) == 'nan':
@@ -67,10 +73,7 @@ def extract_number(st):
 
 def setcategory(data):
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "user", "content": f"""
+    promt = f"""
 Given the product name, determine the most appropriate category from the following list:
 
 Electronics & Technology
@@ -86,11 +89,18 @@ Security & Tools
 The product name is:
 {data} 
 What is the category for this product?
-             
-             """},
-        ]
-    )
-    return response.choices[0].message.content
+"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "user", "content": promt},
+            ]
+        )
+        return response.choices[0].message.content
+    except OpenAI.error.OpenAIError as e:
+        telegrampost.chacker(f"OpenAI API error: {e}")
+        return None 
 
 def insetdata(data):
 
