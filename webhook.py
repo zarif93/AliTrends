@@ -108,6 +108,7 @@ def get_product_details_by_post(post_id):
         return None
 
 def send_private_message(post_id, user_id, sender_name):
+    print(user_id)
     product_data = get_product_details_by_post(post_id)
     page_tokens = get_page_tokens()
 
