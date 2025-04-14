@@ -53,7 +53,7 @@ def webhook():
 
     elif request.method == 'POST':
         data = request.json
-
+        print("Received POST data:", data)
         for entry in data.get('entry', []):
             for change in entry.get('changes', []):
                 if change.get('field') == 'feed' and change.get('value', {}).get('item') == 'comment':
