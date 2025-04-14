@@ -40,6 +40,7 @@ def facepost(data, id, token):
             }
     else:  
         new_choice = random.randint(0,1)
+        new_choice = 0
         if new_choice == 0 :
             new_message = f"""Comment "link" to get the product link in a private message!
             *
