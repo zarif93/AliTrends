@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, render_template, jsonify
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import os
 import requests
@@ -32,10 +33,10 @@ def get_page_tokens():
     page_tokens = {page['id']: page['access_token'] for page in data.get('data', [])}
     return page_tokens
 
-# דף הבית
+# דף הבית שמציג את טופס ההעלאה
 @app.route('/')
 def home():
-    return "Webhook is running!"
+    return render_template('index.html')
 
 # webhook של פייסבוק
 @app.route('/webhook', methods=['GET', 'POST'])
