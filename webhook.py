@@ -1,16 +1,32 @@
 from flask import Flask, request
+from dotenv import load_dotenv
 import os
 import json
 import requests
 import database
 
+# טוען משתני סביבה
+load_dotenv()
+
 app = Flask(__name__)
 
-# הטוקן שאתה מגדיר בפייסבוק
-VERIFY_TOKEN = "fb_webhook_2025"
-PAGE_ACCESS_TOKEN = 'your_page_access_token_here'  # הטוקן של הדף
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")  # VERIFY_TOKEN מקובץ .env
 
-# דף הבית - סתם בשביל לבדוק שהשרת רץ
+# פונקציה לשליפת ה־page tokens מה־API של פייסבוק
+def get_page_tokens():
+    url = "https://graph.facebook.com/v22.0/me/accounts"
+    params = {
+        "fields": "access_token,name,id",
+        "access_token": os.getenv('FACE_TOKEN')  # טוקן אישי מה־.env
+    }
+
+    response = requests.get(url, params=params)
+    response.raise_for_status()
+    data = response.json()
+    page_tokens = {page['id']: page['access_token'] for page in data.get('data', [])}
+    return page_tokens
+
+# דף הבית
 @app.route('/')
 def home():
     return "Webhook is running!"
@@ -19,56 +35,44 @@ def home():
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     if request.method == 'GET':
-        # שלב האימות עם פייסבוק
         token = request.args.get('hub.verify_token')
         challenge = request.args.get('hub.challenge')
-        
+
         if token == VERIFY_TOKEN:
             return challenge, 200
         else:
             return 'Invalid verification token', 403
 
     elif request.method == 'POST':
-        # קבלת מידע מה־Webhook
         data = request.json
-        print("Received webhook data:", json.dumps(data, indent=2))
 
-        # נבדוק אם מדובר בהודעה של comment
         for entry in data.get('entry', []):
             for change in entry.get('changes', []):
-                field = change.get('field')
-                if field == 'feed':
+                if change.get('field') == 'feed' and change.get('value', {}).get('item') == 'comment':
                     value = change.get('value', {})
-                    item = value.get('item')  # comment או like
+                    message = value.get('message', '')
+                    post_id = value.get('post_id')
+                    sender_id = value.get('from', {}).get('id')
+                    sender_name = value.get('from', {}).get('name')
 
-                    if item == 'comment':
-                        comment_id = value.get('comment_id')
-                        message = value.get('message')
-                        post_id = value.get('post_id')
-                        sender_id = value.get('from', {}).get('id')
-                        sender_name = value.get('from', {}).get('name')
-
-                        print(f"\n💬 New comment:")
-                        print(f"- Comment ID: {comment_id}")
-                        print(f"- Message: {message}")
-                        print(f"- Post ID: {post_id}")
-                        print(f"- Sender ID: {sender_id}")
-                        print(f"- Sender Name: {sender_name}")
-
-                        # אם התגובה היא "LINK", שלח הודעה פרטית למגיב
-                        if 'LINK' in message.upper():
-                            send_private_message(post_id, sender_id, sender_name)
+                    if 'LINK' in message.upper():
+                        send_private_message(post_id, sender_id, sender_name)
 
         return 'EVENT_RECEIVED', 200
 
 def send_private_message(post_id, user_id, sender_name):
-
     product_data = database.get_product_details_by_post(post_id)
-    # שלח הודעה פרטית למגיב
+    page_tokens = get_page_tokens()
+
+    # שליפת הטוקן המתאים לפי post_id
+    page_id = post_id.split('_')[0]
+    page_token = page_tokens.get(page_id)
+
+    if not page_token:
+        return
+
     url = f'https://graph.facebook.com/v11.0/{user_id}/messages'
-    headers = {
-        'Content-Type': 'application/json',
-    }
+    headers = {'Content-Type': 'application/json'}
 
     data = {
         "recipient": {
@@ -76,27 +80,18 @@ def send_private_message(post_id, user_id, sender_name):
         },
         "message": {
             "text": f"""Hey {sender_name},
-              here's your link to! 🎉
-              {product_data['ProductDesc']}
+here's your link! 🎉
 
+{product_data['ProductDesc']}
 
-              {product_data['PromotionUrl']}
-              Check it out!
-              
-              """
+{product_data['PromotionUrl']}
+Check it out!
+"""
         }
     }
 
-    params = {
-        'access_token': PAGE_ACCESS_TOKEN
-    }
-
-    response = requests.post(url, headers=headers, json=data, params=params)
-
-    if response.status_code == 200:
-        print(f"Successfully sent message to {sender_name}")
-    else:
-        print(f"Failed to send message to {sender_name}. Error: {response.text}")
+    params = {'access_token': page_token}
+    requests.post(url, headers=headers, json=data, params=params)
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    app.run(port=5000, debug=False)
