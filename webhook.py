@@ -87,7 +87,7 @@ def get_product_details_by_post(post_id):
         SELECT ProductId FROM post WHERE PostId = ?
     """, (post_id,))
     product_id = cur.fetchone()
-    print(product_id)
+    print(product_id[0])
     if product_id:
         # שליפת פרטי המוצר לפי ה-ProductId
         product_id = product_id[0]
