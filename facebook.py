@@ -48,6 +48,7 @@ def facepost(data, id, token):
             *
             *
             {hendler.split_post_content(data[3])[1]}"""
+            print(new_message)
         else:
             new_message = data[3]
         data_to_send = {
