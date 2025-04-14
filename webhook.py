@@ -42,6 +42,7 @@ def home():
 # webhook של פייסבוק
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
+    print('Webhook called')
     if request.method == 'GET':
         token = request.args.get('hub.verify_token')
         challenge = request.args.get('hub.challenge')
