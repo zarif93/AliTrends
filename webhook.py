@@ -6,6 +6,7 @@ import requests
 import database
 import hendler
 import threading
+import sqlite3
 
 
 # טוען משתני סביבה
@@ -78,9 +79,37 @@ def webhook():
                         send_private_message(post_id, sender_id, sender_name)
 
         return 'EVENT_RECEIVED', 200
+def get_product_details_by_post(post_id):
+    conn = sqlite3.connect('database.db')
+    cur = conn.cursor()
+    # שליפת ה-ProductId מהפוסט
+    cur.execute("""
+        SELECT ProductId FROM post WHERE PostId = ?
+    """, (post_id,))
+    product_id = cur.fetchone()
+
+    if product_id:
+        # שליפת פרטי המוצר לפי ה-ProductId
+        product_id = product_id[0]
+        cur.execute("""
+            SELECT * FROM products WHERE ProductId = ?
+        """, (product_id,))
+        product_details = cur.fetchone()
+        conn.close()
+        if product_details:
+            return {
+                'ImageUrl': product_details[1],
+                'ProductDesc': product_details[3],
+                'Feedback': product_details[5],
+                'PromotionUrl': product_details[6],
+            }
+        else:
+            return None
+    else:
+        return None
 
 def send_private_message(post_id, user_id, sender_name):
-    product_data = database.get_product_details_by_post(post_id)
+    product_data = get_product_details_by_post(post_id)
     page_tokens = get_page_tokens()
 
     page_id = post_id.split('_')[0]
