@@ -5,6 +5,7 @@ import os
 import requests
 import database
 import hendler
+import threading
 
 
 # טוען משתני סביבה
@@ -120,7 +121,7 @@ def upload_file():
         file.save(file_path)
 
         # מפעיל פונקציה נוספת אחרי העלאה מוצלחת
-        hendler.insetdata(file.filename)
+        threading.Thread(target=hendler.insetdata, args=(file.filename,)).start()
 
         return jsonify({'success': f'File {file.filename} uploaded and processed successfully'}), 200
 
