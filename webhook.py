@@ -92,7 +92,7 @@ def get_product_details_by_post(post_id):
         # שליפת פרטי המוצר לפי ה-ProductId
         product_id = product_id[0]
         cur.execute("""
-            SELECT * FROM products WHERE ProductId = ?
+            SELECT * FROM products WHERE PromotionUrl = ?
         """, (product_id,))
         product_details = cur.fetchone()
         print(product_details)
