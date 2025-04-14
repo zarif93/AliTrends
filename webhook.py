@@ -80,7 +80,7 @@ def webhook():
 
         return 'EVENT_RECEIVED', 200
 def get_product_details_by_post(post_id):
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('aliexpress.db')
     cur = conn.cursor()
     # שליפת ה-ProductId מהפוסט
     cur.execute("""
