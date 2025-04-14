@@ -95,6 +95,7 @@ def get_product_details_by_post(post_id):
             SELECT * FROM products WHERE ProductId = ?
         """, (product_id,))
         product_details = cur.fetchone()
+        print(product_details)
         conn.close()
         if product_details:
             return {
