@@ -40,6 +40,7 @@ def facepost(data, id, token):
             }
     else:  
         new_choice = random.randint(0,1)
+        new_choice = 1
         if new_choice == 0 :
             new_message = f"""Comment "link" to get the product link in a private message!
             *
@@ -63,14 +64,14 @@ def facepost(data, id, token):
 
     # Make the request to Facebook Graph API
     response = requests.post(url, data=data_to_send, params=params)
-    post_id = response.json().get('id')
+    #post_id = response.json().get('id')
 
     # נוסיף בדיקה אם ה־post_id כבר כולל page_id
     if '_' not in post_id:
         page_id = id  # תוכל לשים את זה ב־.env
         post_id = f"{page_id}_{post_id}"
 
-    database.saveposts(post_id, data[0])
+    # database.saveposts(post_id, data[0])
     # Print the response for debugging
     print("Response Status Code:", response.status_code)
     print("Response Text:", response.text)

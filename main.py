@@ -43,7 +43,7 @@ def haspost(data, leng):
         database.insertpost(data, leng)
         return post 
      
-num = 2
+num = 1
 while True:
 
     telegrampost.chacker('start sending massages')
