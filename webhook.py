@@ -114,11 +114,11 @@ def send_private_message(post_id, user_id, sender_name):
     page_id = post_id.split('_')[0]
     
     page_token = page_tokens.get(page_id)
-    print(page_token)
     if not page_token:
         return
 
-    url = f'https://graph.facebook.com/v11.0/{user_id}/messages'
+    # השתמש בטוקן של הדף לשליחת ההודעה
+    url = f'https://graph.facebook.com/v11.0/me/messages'
     headers = {'Content-Type': 'application/json'}
 
     data = {
@@ -137,8 +137,10 @@ Check it out!
         }
     }
 
+    # השתמש בטוקן של הדף
     params = {'access_token': page_token}
     response = requests.post(url, headers=headers, json=data, params=params)
+
     print(response.status_code, response.text)
 
 # העלאת קובץ XLS עם סיסמה
