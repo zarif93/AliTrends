@@ -112,9 +112,9 @@ def send_private_message(post_id, user_id, sender_name):
     page_tokens = get_page_tokens()
 
     page_id = post_id.split('_')[0]
-    print(page_tokens)
+    
     page_token = page_tokens.get(page_id)
-
+    print(page_token)
     if not page_token:
         return
 
