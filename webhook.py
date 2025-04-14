@@ -1,23 +1,29 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import os
-import json
 import requests
 import database
+import hendler
+
 
 # טוען משתני סביבה
 load_dotenv()
 
 app = Flask(__name__)
 
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")  # VERIFY_TOKEN מקובץ .env
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
+UPLOAD_PASSWORD = os.getenv("UPLOAD_PASSWORD")
+
+# תקיית שמירת הקבצים
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'CSVS')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # פונקציה לשליפת ה־page tokens מה־API של פייסבוק
 def get_page_tokens():
     url = "https://graph.facebook.com/v22.0/me/accounts"
     params = {
         "fields": "access_token,name,id",
-        "access_token": os.getenv('FACE_TOKEN')  # טוקן אישי מה־.env
+        "access_token": os.getenv('FACE_TOKEN')
     }
 
     response = requests.get(url, params=params)
@@ -31,7 +37,7 @@ def get_page_tokens():
 def home():
     return "Webhook is running!"
 
-# ה־Webhook
+# webhook של פייסבוק
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     if request.method == 'GET':
@@ -64,7 +70,6 @@ def send_private_message(post_id, user_id, sender_name):
     product_data = database.get_product_details_by_post(post_id)
     page_tokens = get_page_tokens()
 
-    # שליפת הטוקן המתאים לפי post_id
     page_id = post_id.split('_')[0]
     page_token = page_tokens.get(page_id)
 
@@ -92,6 +97,31 @@ Check it out!
 
     params = {'access_token': page_token}
     requests.post(url, headers=headers, json=data, params=params)
+
+# העלאת קובץ XLS עם סיסמה
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    password = request.form.get('password')
+
+    if password != UPLOAD_PASSWORD:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    if file:
+        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(file_path)
+
+        # מפעיל פונקציה נוספת אחרי העלאה מוצלחת
+        hendler.insetdata(file.filename)
+
+        return jsonify({'success': f'File {file.filename} uploaded and processed successfully'}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
