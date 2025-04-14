@@ -1,6 +1,6 @@
 import sqlite3
 
-con = sqlite3.connect("aliexpress.db")
+con = sqlite3.connect("aliexpress.db", check_same_thread=False)
 
 cur = con.cursor()
 
