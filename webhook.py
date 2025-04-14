@@ -87,7 +87,6 @@ def get_product_details_by_post(post_id):
         SELECT ProductId FROM post WHERE PostId = ?
     """, (post_id,))
     product_id = cur.fetchone()
-    print(product_id[0])
     if product_id:
         # שליפת פרטי המוצר לפי ה-ProductId
         product_id = product_id[0]
@@ -95,7 +94,6 @@ def get_product_details_by_post(post_id):
             SELECT * FROM products WHERE PromotionUrl = ?
         """, (product_id,))
         product_details = cur.fetchone()
-        print(product_details)
         conn.close()
         if product_details:
             return {
@@ -114,6 +112,7 @@ def send_private_message(post_id, user_id, sender_name):
     page_tokens = get_page_tokens()
 
     page_id = post_id.split('_')[0]
+    print(page_id)
     page_token = page_tokens.get(page_id)
 
     if not page_token:
