@@ -104,6 +104,7 @@ Check it out!
 # העלאת קובץ XLS עם סיסמה
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    print("Webhook called")
     password = request.form.get('password')
 
     if password != UPLOAD_PASSWORD:
