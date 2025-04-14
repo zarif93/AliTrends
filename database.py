@@ -35,6 +35,8 @@ def poststable(leng):
 #print(cur.execute(f"SELECT rowid,* FROM posts").fetchall())
 
 def get_product_details_by_post(post_id):
+    conn = sqlite3.connect('database.db')
+    cur = conn.cursor()
     # שליפת ה-ProductId מהפוסט
     cur.execute("""
         SELECT ProductId FROM post WHERE PostId = ?
@@ -48,7 +50,7 @@ def get_product_details_by_post(post_id):
             SELECT * FROM products WHERE ProductId = ?
         """, (product_id,))
         product_details = cur.fetchone()
-
+        conn.close()
         if product_details:
             return {
                 'ImageUrl': product_details[1],
