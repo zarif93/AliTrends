@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify ,send_from_directory
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import os
@@ -38,6 +38,16 @@ def get_page_tokens():
 @app.route('/')
 def home():
     return render_template('index.html')
+
+@app.route('/down')
+def download_db():
+    # הגדרת נתיב לקובץ ה-DB
+    db_file = '/root/ali/AliTrends/aliexpress.db'
+    directory = os.path.dirname(db_file)  # נתיב לתיקיה בה נמצא הקובץ
+
+    # שולח את הקובץ לדפדפן להורדה
+    return send_from_directory(directory, os.path.basename(db_file), as_attachment=True)
+
 
 # webhook של פייסבוק
 @app.route('/webhook', methods=['GET', 'POST'])
