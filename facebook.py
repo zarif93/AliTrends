@@ -40,7 +40,6 @@ def facepost(data, id, token):
             }
     else:  
         new_choice = random.randint(0,1)
-        new_choice = 1
         if new_choice == 0 :
             new_message = f"""Comment "link" to get the product link in a private message!
             *
@@ -49,7 +48,6 @@ def facepost(data, id, token):
             *
             *
             {hendler.split_post_content(data[3])[1]}"""
-            print(new_message)
         else:
             new_message = data[3]
         data_to_send = {
@@ -65,8 +63,8 @@ def facepost(data, id, token):
 
     # Make the request to Facebook Graph API
     response = requests.post(url, data=data_to_send, params=params)
-
+    database.saveposts(response.json().get('id'), data[0])
     # Print the response for debugging
     print("Response Status Code:", response.status_code)
     print("Response Text:", response.text)
-    database.saveposts(response.json().get('id'), data[0])
+    
