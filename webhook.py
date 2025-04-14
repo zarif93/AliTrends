@@ -118,7 +118,7 @@ def send_private_message(post_id, user_id, sender_name):
         return
 
     # השתמש בטוקן של הדף לשליחת ההודעה
-    url = f'https://graph.facebook.com/v11.0/me/messages'
+    url = f'https://graph.facebook.com/v11.0/{page_id}/messages'
     headers = {'Content-Type': 'application/json'}
 
     data = {
