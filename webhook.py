@@ -98,7 +98,8 @@ Check it out!
     }
 
     params = {'access_token': page_token}
-    requests.post(url, headers=headers, json=data, params=params)
+    response = requests.post(url, headers=headers, json=data, params=params)
+    print(response.status_code, response.text)
 
 # העלאת קובץ XLS עם סיסמה
 @app.route('/upload', methods=['POST'])
