@@ -13,6 +13,16 @@ ai_api = os.getenv("AI_API")
 
 client = OpenAI(api_key=ai_api)
 
+def split_post_content(content):
+    # ביטוי רגולרי כדי למצוא את כל ההאשטאגים
+    hashtags = re.findall(r'#\w+', content)
+
+    # הסרת ההאשטאגים מהתוכן
+    content_without_hashtags = re.sub(r'#\w+', '', content)
+
+    # החזרת שני החלקים
+    return content_without_hashtags.strip(), ' '.join(hashtags)
+
 def setpost(data, leng):
     # תיאור מערכת ממוקד יותר
     sysrole = """

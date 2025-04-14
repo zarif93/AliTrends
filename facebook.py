@@ -2,6 +2,8 @@ import requests
 import os
 import random
 from dotenv import load_dotenv
+import hendler
+import database
 load_dotenv()
 
 def gettoken():
@@ -36,9 +38,22 @@ def facepost(data, id, token):
             'message': data[3],  # Concatenating message with new line
             'link': data[0],  # The URL of the website (use the correct link URL)
             }
-    else:
+    else:  
+        new_choice = random.randint(0,1)
+        new_choice = 1
+        if new_choice == 0 :
+            new_message = f"""Comment "link" to get the product link in a private message!
+            *
+            *
+            *
+            *
+            *
+            {hendler.split_post_content(data[3])[1]}"""
+        else:
+            new_message = data[3]
         data_to_send = {
-            'message': data[3],  # Concatenating message with new line
+
+            'message': new_message,  # Concatenating message with new line
             'url': data[1],  # The URL of the image (use the correct image URL)
             }
 
@@ -53,3 +68,4 @@ def facepost(data, id, token):
     # Print the response for debugging
     print("Response Status Code:", response.status_code)
     print("Response Text:", response.text)
+    database.saveposts(response.json().get('id'), data[0])

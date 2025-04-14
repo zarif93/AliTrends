@@ -2,4 +2,5 @@
 *.db
 aliexpress.db
 /csvs
+test.py
 
