@@ -18,7 +18,7 @@ VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 UPLOAD_PASSWORD = os.getenv("UPLOAD_PASSWORD")
 
 # תקיית שמירת הקבצים
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'CSVS')
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'csvs')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # פונקציה לשליפת ה־page tokens מה־API של פייסבוק
@@ -166,7 +166,8 @@ def upload_file():
         file.save(file_path)
 
         # מפעיל פונקציה נוספת אחרי העלאה מוצלחת
-        threading.Thread(target=hendler.insetdata, args=(file.filename,)).start()
+        if os.path.exists(file_path):
+            threading.Thread(target=hendler.insetdata, args=(file.filename,)).start()
 
         return jsonify({'success': f'File {file.filename} uploaded and processed successfully'}), 200
 
