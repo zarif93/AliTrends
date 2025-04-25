@@ -9,9 +9,9 @@ load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
-def chacker(mass):
+def chacker(mass, bool):
     chat_id = '7902249875'
-    bot.send_message(chat_id, mass)
+    bot.send_message(chat_id, mass, disable_notification=bool)
 
 def send_photo_and_data(data,id):
 

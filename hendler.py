@@ -1,4 +1,4 @@
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 import database
 import pandas as pd
 import time
@@ -69,8 +69,8 @@ def setpost(data, leng):
             ]
         )
         return response.choices[0].message.content
-    except OpenAI.error.OpenAIError as e:
-        telegrampost.chacker(f"OpenAI API error: {e}")
+    except OpenAIError  as e:
+        telegrampost.chacker(f"OpenAI API error: {e}", False)
         return None
 
     
@@ -108,8 +108,8 @@ What is the category for this product?
             ]
         )
         return response.choices[0].message.content
-    except OpenAI.error.OpenAIError as e:
-        telegrampost.chacker(f"OpenAI API error: {e}")
+    except OpenAIError  as e:
+        telegrampost.chacker(f"OpenAI API error: {e}", False)
         return None 
 
 def insetdata(data):

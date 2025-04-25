@@ -46,7 +46,7 @@ def haspost(data, leng):
 num = 1
 while True:
 
-    telegrampost.chacker('start sending massages')
+    telegrampost.chacker('start sending massages', True)
     pagetoken = facebook.gettoken()
 
     for leng in langlist:
@@ -90,5 +90,5 @@ while True:
 
     #  need to sleep 3600 sec
     print('going to sleep for 1 hour')
-    telegrampost.chacker('stop sending massages')
+    telegrampost.chacker('stop sending massages', True)
     time.sleep(3000)
