@@ -5,6 +5,7 @@ import telegrampost
 import facebook
 import os
 from dotenv import load_dotenv
+import smm
 
 load_dotenv()
 
@@ -84,7 +85,10 @@ while True:
                 else:
                     print(f'{lng} post to facebook productid {data[0]}')
                     token = pagetoken.get(f_id)
-                    facebook.facepost(post, f_id, token)
+                    postid = facebook.facepost(post, f_id, token)
+                    linktolike = facebook.get_url_link(postid, token)
+                    smm.set_order(linktolike)
+
             time.sleep(t)
     num = num + 1
 

@@ -75,4 +75,56 @@ def facepost(data, id, token):
     # Print the response for debugging
     print("Response Status Code:", response.status_code)
     print("Response Text:", response.text)
+
     
+
+    if random_word == 'photos':
+        # photo response.json()['post_id']
+        # return {'id': '270044559535582_122169843794329614'}
+        return response.json()['post_id']
+    elif random_word == 'feed':
+        # feed response.json()['id']
+        # return {'id': '270044559535582_122169843794329614'}
+        return response.json()['id']
+    
+
+
+
+
+    
+def get_url_link(data, token):
+
+    url = f"https://graph.facebook.com/{data}"
+
+    params = {
+        'access_token': token,  # Your page access token
+        "fields" : "permalink_url"
+    }
+
+    response = requests.get(url, params=params)
+
+    return response.json()['permalink_url']
+
+def test():
+    token = "EAAaQZCjJxnj4BOxxgUQaOOoet1IkcZBcPUsfq3lzp2wi4dlpLTbzOVs6YJoxqxyGwfzes6b8T4eqpNJPZBRfZBA1PIZAiPR52l9g8egtmmQ2ZCI6vHteGw0L07Jkegf4VsaMV3uPnPNW71E1TN54cI1QkjbQUOOXzUHcWysPfpBRd4DKKbdof3hNfqvzXjNjYSVoPyKvrDPJmXDoBZA"
+    
+    id = "270044559535582"
+
+    words = ["feed", "photos"]
+
+    url = f"https://graph.facebook.com/{id}/photos"
+
+    params = {
+        'access_token': token,  # Your page access token
+    }
+
+    data_to_send = {
+        'message': "test",  # Concatenating message with new line
+        'url': "https://i.sstatic.net/tz8TK.png",  # The URL of the image (use the correct image URL)
+        #'link': "https://google.com",  # The URL of the website (use the correct link URL)
+        }
+
+    response = requests.post(url, data=data_to_send, params=params)
+    return response.json()['post_id']
+
+
