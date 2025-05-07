@@ -39,18 +39,7 @@ def facepost(data, id, token):
             'link': data[0],  # The URL of the website (use the correct link URL)
             }
     else:  
-        new_choice = random.randint(0,1)
-        new_choice = 1
-        if new_choice == 0 :
-            new_message = f"""Comment "link" to get the product link in a private message!
-            *
-            *
-            *
-            *
-            *
-            {hendler.split_post_content(data[3])[1]}"""
-        else:
-            new_message = data[3]
+        new_message = data[3]
         data_to_send = {
 
             'message': new_message,  # Concatenating message with new line
@@ -64,34 +53,25 @@ def facepost(data, id, token):
 
     # Make the request to Facebook Graph API
     response = requests.post(url, data=data_to_send, params=params)
-    #post_id = response.json().get('id')
 
-    # נוסיף בדיקה אם ה־post_id כבר כולל page_id
-    #if '_' not in post_id:
-    #    page_id = id  # תוכל לשים את זה ב־.env
-    #    post_id = f"{page_id}_{post_id}"
-
-    # database.saveposts(post_id, data[0])
-    # Print the response for debugging
     print("Response Status Code:", response.status_code)
     print("Response Text:", response.text)
 
+    post_id = response.json().get('post_id')
+
+    if post_id:
+        return post_id
+    
     post_id = response.json().get('id')
-    if not post_id:
-        return None
-    return post_id
+    if post_id:
+        return post_id
+    
+    return None
 
     
 def get_url_link(data, token):
 
-    if "_" in data:
-        # Split the string into page_id and post_id
-        data = data.split("_")
-        page_id = data[1]
-    else:
-        page_id = data
-
-    url = f"https://graph.facebook.com/{page_id}"
+    url = f"https://graph.facebook.com/{data}"
 
     params = {
         'access_token': token,  # Your page access token
@@ -99,7 +79,7 @@ def get_url_link(data, token):
     }
 
     response = requests.get(url, params=params)
-
+    
     link = response.json().get("permalink_url")
     if not link:
         return None

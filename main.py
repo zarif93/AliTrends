@@ -44,7 +44,7 @@ def haspost(data, leng):
         database.insertpost(data, leng)
         return post 
      
-num = 1
+num = 2
 while True:
 
     telegrampost.chacker('start sending massages', True)
@@ -84,12 +84,12 @@ while True:
                     print(f'{face} has no Facebook page')
                 else:
                     print(f'{lng} post to facebook productid {data[0]}')
+
                     token = pagetoken.get(f_id)
                     postid = facebook.facepost(post, f_id, token)
-
                     if list == 'main' and postid:
-
                         linktolike = facebook.get_url_link(postid, token)
+
                         if linktolike:
                             smm.set_order(linktolike)
 
