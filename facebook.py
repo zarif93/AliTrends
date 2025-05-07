@@ -76,25 +76,24 @@ def facepost(data, id, token):
     print("Response Status Code:", response.status_code)
     print("Response Text:", response.text)
 
-    
-
-    if random_word == 'photos':
-        # photo response.json()['post_id']
-        # return {'id': '270044559535582_122169843794329614'}
-        return response.json()['post_id']
-    elif random_word == 'feed':
-        # feed response.json()['id']
-        # return {'id': '270044559535582_122169843794329614'}
-        return response.json()['id']
-    
-
-
-
+    post_id = response.json().get('id')
+    if not post_id:
+        return None
+    return post_id
 
     
 def get_url_link(data, token):
 
-    url = f"https://graph.facebook.com/{data}"
+    if "_" in data:
+        # Split the string into page_id and post_id
+        data = data.split("_")
+
+        page_id = data[1]
+
+    else:
+        page_id = data
+
+    url = f"https://graph.facebook.com/{page_id}"
 
     params = {
         'access_token': token,  # Your page access token
@@ -106,7 +105,7 @@ def get_url_link(data, token):
     return response.json()['permalink_url']
 
 def test():
-    token = "EAAaQZCjJxnj4BOxxgUQaOOoet1IkcZBcPUsfq3lzp2wi4dlpLTbzOVs6YJoxqxyGwfzes6b8T4eqpNJPZBRfZBA1PIZAiPR52l9g8egtmmQ2ZCI6vHteGw0L07Jkegf4VsaMV3uPnPNW71E1TN54cI1QkjbQUOOXzUHcWysPfpBRd4DKKbdof3hNfqvzXjNjYSVoPyKvrDPJmXDoBZA"
+    token = "EAAaQZCjJxnj4BOZBZAXP3f5GvsvW1aLIq0MmYeDzKOKlwZAKZBlZAAQpv9cXAbQj95ZAW8wXDzecrAKQtaZBhUO2jB93t6SBZA5uXqGt1Gm2DzZCQNPXo5kEXd2BXLZCFhxfsUqO7hIuZAuAonF8PXTxK3Av9OKa3mVoxvZBpS3qEZCEyVXJFOGkNX3Xs3humyC5VhrKQm7nf5r4C0W3oqN7c9JlSf"
     
     id = "270044559535582"
 
@@ -121,10 +120,11 @@ def test():
     data_to_send = {
         'message': "test",  # Concatenating message with new line
         'url': "https://i.sstatic.net/tz8TK.png",  # The URL of the image (use the correct image URL)
-        #'link': "https://google.com",  # The URL of the website (use the correct link URL)
+        #'link': "https://www.google.com",  # The URL of the website (use the correct link URL)
         }
 
     response = requests.post(url, data=data_to_send, params=params)
-    return response.json()['post_id']
+    return response.json().get('id')
 
+#print(test())
 
