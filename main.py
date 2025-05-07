@@ -86,8 +86,10 @@ while True:
                     print(f'{lng} post to facebook productid {data[0]}')
                     token = pagetoken.get(f_id)
                     postid = facebook.facepost(post, f_id, token)
-                    linktolike = facebook.get_url_link(postid, token)
-                    smm.set_order(linktolike)
+                    if list == 'main':
+                        smm.set_order(data[0])
+                        linktolike = facebook.get_url_link(postid, token)
+                        smm.set_order(linktolike)
 
             time.sleep(t)
     num = num + 1
