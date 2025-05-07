@@ -90,7 +90,8 @@ while True:
                     if list == 'main' and postid:
 
                         linktolike = facebook.get_url_link(postid, token)
-                        smm.set_order(linktolike)
+                        if linktolike:
+                            smm.set_order(linktolike)
 
             time.sleep(t)
     num = num + 1

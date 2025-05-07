@@ -87,9 +87,7 @@ def get_url_link(data, token):
     if "_" in data:
         # Split the string into page_id and post_id
         data = data.split("_")
-
         page_id = data[1]
-
     else:
         page_id = data
 
@@ -102,7 +100,10 @@ def get_url_link(data, token):
 
     response = requests.get(url, params=params)
 
-    return response.json()['permalink_url']
+    link = response.json().get("permalink_url")
+    if not link:
+        return None
+    return link
 
 def test():
     token = "EAAaQZCjJxnj4BOZBZAXP3f5GvsvW1aLIq0MmYeDzKOKlwZAKZBlZAAQpv9cXAbQj95ZAW8wXDzecrAKQtaZBhUO2jB93t6SBZA5uXqGt1Gm2DzZCQNPXo5kEXd2BXLZCFhxfsUqO7hIuZAuAonF8PXTxK3Av9OKa3mVoxvZBpS3qEZCEyVXJFOGkNX3Xs3humyC5VhrKQm7nf5r4C0W3oqN7c9JlSf"
