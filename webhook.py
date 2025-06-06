@@ -57,9 +57,9 @@ def upload_files():
             file.save(file_path)
             uploaded.append(filename)
 
-    # שלב 2: עיבוד אחרי שכל הקבצים נשמרו
-    for filename in uploaded:
-        hendler.insetdata
+    import additem
+
+    threading.Thread(target=additem, args=(filename,)).start()
 
     return jsonify({
         'success': f'{len(uploaded)} files uploaded and are being processed',
