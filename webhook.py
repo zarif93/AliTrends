@@ -7,6 +7,7 @@ import database
 import hendler
 import threading
 import sqlite3
+import additem
 
 # טוען משתני סביבה
 load_dotenv()
@@ -57,9 +58,8 @@ def upload_files():
             file.save(file_path)
             uploaded.append(filename)
 
-    import additem
 
-    threading.Thread(target=additem, args=(filename,)).start()
+    threading.Thread(target=additem.run() , args=(filename,)).start()
 
     return jsonify({
         'success': f'{len(uploaded)} files uploaded and are being processed',
