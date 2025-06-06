@@ -15,7 +15,8 @@ langlist =[
     'Arabic',
     'Portuguese', 
     'French',
-    'Spanish'
+    'Spanish',
+    'Hebrew'
 ]
 
 lists = [
