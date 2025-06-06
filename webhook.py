@@ -57,7 +57,7 @@ def upload_files():
             file.save(file_path)
 
             if os.path.exists(file_path):
-                threading.Thread(target=hendler.insetdata, args=(filename,)).start()
+                hendler.insetdata(filename)
                 uploaded.append(filename)
 
     return jsonify({
