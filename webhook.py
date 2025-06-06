@@ -59,7 +59,7 @@ def upload_files():
             uploaded.append(filename)
 
 
-    threading.Thread(target=additem.run() , args=(filename,)).start()
+    threading.Thread(target=additem.run , args=(filename,)).start()
 
     return jsonify({
         'success': f'{len(uploaded)} files uploaded and are being processed',
