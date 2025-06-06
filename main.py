@@ -1,10 +1,11 @@
+import os
+import time
+import itertools
+from dotenv import load_dotenv
 import hendler
 import database
-import time
 import telegrampost
 import facebook
-import os
-from dotenv import load_dotenv
 import smm
 
 load_dotenv()
@@ -30,71 +31,69 @@ lists = [
     'Security & Tools'
 ]
 
-
-def haspost(data, leng):
+def haspost(data, language):
+    #print(data)
 
 #    IF not have post create one
-    if database.getpost(data[0], leng):
-        post = (data[6],data[1],data[2],database.getpost(data[0], leng)[1])
-        return post
+    if database.getpost(data['ProductId'], language):
+        data['post'] = database.getpost(data['ProductId'], language)
+        return data
     else:
-        setpost = hendler.setpost(data, leng)
-        post = (data[6],data[1],data[2],setpost)
-        data = (data,setpost)
-        database.insertpost(data, leng)
-        return post 
+        data['post'] = hendler.setpost(data, language)
+        database.insertpost(data, language)
+        return data
      
-num = 2
+num = 1
 while True:
 
     telegrampost.chacker('start sending massages', True)
-    pagetoken = facebook.gettoken()
+    pagetoken = facebook.get_tokens()
+    time_sleep = 1
 
-    for leng in langlist:
+    for leng, list in itertools.product(langlist, lists):
+        facebook_key_id = leng + ' Facebook '+list
 
-        for list in lists:
+        telegram_key_id = leng +' '+ list
 
-            face = leng + ' Facebook '+list
+        if "main" in list:
+            data = database.selectrandom(False)
+        else:
+            data = database.selectrandom(list)
 
-            lng = leng +' '+ list
+        telegram_id = os.getenv(telegram_key_id)
+        facebook_id = os.getenv(facebook_key_id)
 
-            if lng == leng+' main':
-                data = database.selectrandom(False)
-                id = os.getenv(lng)
-                f_id = os.getenv(face)
+        # post to telegram 
+        if telegram_id == 'false':
+            print(f'{telegram_key_id} has no telegram channel')
+            time_sleep = 1
+        else:
+            post = haspost(data, leng)
+            telegrampost.send_photo_and_data(post, telegram_id)
+            print(f'{telegram_key_id} post to telegram productid { data["ProductId"] }')
+            time_sleep = 30
+
+        # post to facebook
+        if num % 2 == 0:
+            # sec time to facebook
+            if facebook_id == 'false':
+                print(f'{facebook_key_id} has no Facebook page')
             else:
-                data = database.selectrandom(list)
-                id = os.getenv(lng)
-                f_id = os.getenv(face)
+                print(f'{telegram_key_id} post to facebook productid {data["ProductId"]}')
+                token = pagetoken.get(facebook_id)
+                postid = facebook.facepost(post, facebook_id, token)
 
-            # post to telegram 
-            if id == 'false':
-                print(f'{lng} has no telegram channel')
-                t = 1
-            else:
-                post = haspost(data, leng)
-                telegrampost.send_photo_and_data(post,id)
-                print(f'{lng} post to telegram productid {data[0]}')
-                t = 30
+                if list == 'main' and postid:
+                    linktolike = facebook.get_url_link(postid, token)
 
-            # post to face book 
-            if num % 2 == 0:
-                # sec time to facebook
-                if f_id == 'false':
-                    print(f'{face} has no Facebook page')
-                else:
-                    print(f'{lng} post to facebook productid {data[0]}')
+                    if linktolike:
+                        smm.set_order(linktolike)
 
-                    token = pagetoken.get(f_id)
-                    postid = facebook.facepost(post, f_id, token)
-                    if list == 'main' and postid:
-                        linktolike = facebook.get_url_link(postid, token)
+        time.sleep(time_sleep)
 
-                        if linktolike:
-                            smm.set_order(linktolike)
-
-            time.sleep(t)
     num = num + 1
+    if num == 11:
+        num = 1
 
     #  need to sleep 3600 sec
     print('going to sleep for 1 hour')

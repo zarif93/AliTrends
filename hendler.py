@@ -34,30 +34,40 @@ def setpost(data, leng):
     
     # יצירת הפורמט של הפוסט עם פרטי המוצר
     prompt = f"""
-    You are a highly skilled social media content creator. Your task is to write a social media post with the following structure:
+        You are a professional social media marketer. Create a **high-converting Facebook post** that presents the following product data in a way that grabs attention, builds trust, and encourages clicks and purchases.
 
-    1. **Description**: 
-    - {data[3]}  
+        Follow this exact structure:
 
-    2. **Discount Price**: 
-    - Discount Price: {data[4]} USD 
-    
-    3. **Rating**:
-    - Rating: {data[5]}  
+        1. **Link (first thing in post)**  
+        - Only include the product link: {data["PromotionUrl"]}
 
-    4. **Link**:
-    - The link must be the only content in this section: {data[6]}  
+        2. **Headline (strong, attention-grabbing)**  
+        - Write a short and powerful sentence that highlights the main benefit, discount, or urgency of the product.
+        - Make sure it builds excitement and encourages the user to keep reading.
 
-    6. **Hashtags**: 
-    - Include exactly 17 relevant and engaging hashtags that are aligned with the product, sale, and target audience. 
-    - These hashtags should help generate excitement and engagement.
+        3. **Product Description (natural and persuasive)**  
+        - Describe what the product does and why it's useful or exciting.
+        - Focus on benefits to the customer, not just technical details.
+        - Include product name naturally.
+        - Keep it easy to read, 2–3 short sentences max.
 
-    The post should be clear, concise, and written in a natural, easy-to-read tone.
+        4. **Price & Discount**  
+        - Show original price: {data["OriginPrice"]} USD  
+        - Show discount price: {data["DiscountPrice"]} USD  
+        - Highlight the discount: {data["Discount"]}% OFF
 
-    **Please make sure to follow the structure above exactly as described.**
-    **Write the price in USD.**
-    **Please write in {leng}.**
-    """
+        5. **Rating & Social Proof**  
+        - Rating: ⭐ {data["Feedback"]} out of 5  
+        - Sales: {data["Sales180Day"]} sold in the last 180 days
+
+        6. **Hashtags**  
+        - Add exactly 17 highly relevant hashtags for the product’s niche, features, and shopping intent.  
+        - Use a mix of general and specific hashtags.  
+        - Use hashtags in English unless {leng} is Hebrew, then translate/adapt them.
+
+        Write the post in {leng}. Use an engaging, friendly, and sales-oriented tone. Avoid sounding robotic. Use emojis only if natural.
+        """
+
     
     # יצירת בקשה ל-API
     try:
@@ -134,11 +144,14 @@ def insetdata(data):
             if str(row[1]['Video Url']) == 'nan':
                 row[1]['Video Url'] = False
 
-            da = ( row[1]['ProductId'], 
+            da = ( 
+                row[1]['ProductId'], 
                 row[1]['Image Url'], 
-                row[1]['Video Url'], 
-                row[1]['Product Desc'], 
-                extract_number(row[1]['Discount Price']), 
+                row[1]['Product Desc'],
+                extract_number(row[1]['Origin Price']), 
+                extract_number(row[1]['Discount Price']),
+                extract_number(row[1]['Discount']),
+                row[1]['Sales180Day'],
                 float('%.1f' % (extract_number(row[1]['Positive Feedback'])*5/100)), 
                 row[1]['Promotion Url'],
                 setcategory(row[1]['Product Desc'])
