@@ -35,32 +35,35 @@ def download_db():
     # שולח את הקובץ לדפדפן להורדה
     return send_from_directory(directory, os.path.basename(db_file), as_attachment=True)
 
-# העלאת קובץ XLS עם סיסמה
+# העלאת מספר קבצי XLS עם סיסמה
 @app.route('/upload', methods=['POST'])
-def upload_file():
+def upload_files():
     print("Webhook called")
     password = request.form.get('password')
 
     if password != UPLOAD_PASSWORD:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
+    files = request.files.getlist('file')
+    if not files or all(file.filename == '' for file in files):
+        return jsonify({'error': 'No files provided'}), 400
 
-    file = request.files['file']
+    uploaded = []
 
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+    for file in files:
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(file_path)
 
-    if file:
-        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(file_path)
+            if os.path.exists(file_path):
+                threading.Thread(target=hendler.insetdata, args=(filename,)).start()
+                uploaded.append(filename)
 
-        # מפעיל פונקציה נוספת אחרי העלאה מוצלחת
-        if os.path.exists(file_path):
-            threading.Thread(target=hendler.insetdata, args=(file.filename,)).start()
-
-        return jsonify({'success': f'File {file.filename} uploaded and processed successfully'}), 200
+    return jsonify({
+        'success': f'{len(uploaded)} files uploaded and are being processed',
+        'files': uploaded
+    }), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
