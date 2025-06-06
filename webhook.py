@@ -59,7 +59,7 @@ def upload_files():
 
     # שלב 2: עיבוד אחרי שכל הקבצים נשמרו
     for filename in uploaded:
-        threading.Thread(target=hendler.insetdata, args=(filename,)).start()
+        hendler.insetdata
 
     return jsonify({
         'success': f'{len(uploaded)} files uploaded and are being processed',
