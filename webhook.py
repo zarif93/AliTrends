@@ -35,7 +35,6 @@ def download_db():
     # שולח את הקובץ לדפדפן להורדה
     return send_from_directory(directory, os.path.basename(db_file), as_attachment=True)
 
-# העלאת מספר קבצי XLS עם סיסמה
 @app.route('/upload', methods=['POST'])
 def upload_files():
     print("Webhook called")
@@ -50,15 +49,17 @@ def upload_files():
 
     uploaded = []
 
+    # שלב 1: שמירה של כל הקבצים
     for file in files:
         if file and file.filename:
             filename = secure_filename(file.filename)
             file_path = os.path.join(UPLOAD_FOLDER, filename)
             file.save(file_path)
+            uploaded.append(filename)
 
-            if os.path.exists(file_path):
-                hendler.insetdata(filename)
-                uploaded.append(filename)
+    # שלב 2: עיבוד אחרי שכל הקבצים נשמרו
+    for filename in uploaded:
+        threading.Thread(target=hendler.insetdata, args=(filename,)).start()
 
     return jsonify({
         'success': f'{len(uploaded)} files uploaded and are being processed',
