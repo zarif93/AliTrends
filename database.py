@@ -27,13 +27,17 @@ def poststable(leng):
             post text
             )""")
 
-
-
 def getpost(data,leng):
 
     poststable(leng)
 
     return cur.execute(f"SELECT Post FROM {leng}posts WHERE ProductId = {data}").fetchone()
+
+def isset(productid):
+    query = "SELECT EXISTS(SELECT 1 FROM products WHERE ProductId = ?)" 
+    cur.execute(query, (productid,))
+    return cur.fetchone()[0]  # Returns 1 if exists, 0 if not
+
 
 def selectrandom(data):
 
