@@ -24,51 +24,105 @@ def split_post_content(content):
     return content_without_hashtags.strip(), ' '.join(hashtags)
 
 def setpost(data, leng):
+
     # תיאור מערכת ממוקד יותר
     sysrole = """
-    You are an expert social media content creator. Your posts should be engaging, clear, and drive action. 
-    Focus on creating concise, persuasive content that resonates deeply with the target audience and sparks emotion. 
-    Ensure each post aligns with the brand's tone and voice, while strategically driving traffic and conversions. 
-    The tone should be professional yet approachable, with a sense of urgency to compel users to act.
-    """
-    
-    # יצירת הפורמט של הפוסט עם פרטי המוצר
-    prompt = f"""
-        You are a professional social media marketer. Create a **high-converting Facebook post** that presents the following product data in a way that grabs attention, builds trust, and encourages clicks and purchases.
-
-        Follow this exact structure:
-
-        1. **Link (first thing in post)**  
-        - Only include the product link: {data["PromotionUrl"]}
-
-        2. **Headline (strong, attention-grabbing)**  
-        - Write a short and powerful sentence that highlights the main benefit, discount, or urgency of the product.
-        - Make sure it builds excitement and encourages the user to keep reading.
-
-        3. **Product Description (natural and persuasive)**  
-        - Describe what the product does and why it's useful or exciting.
-        - Focus on benefits to the customer, not just technical details.
-        - Include product name naturally.
-        - Keep it easy to read, 2–3 short sentences max.
-
-        4. **Price & Discount**  
-        - Show original price: {data["OriginPrice"]} USD  
-        - Show discount price: {data["DiscountPrice"]} USD  
-        - Highlight the discount: {data["Discount"]}% OFF
-
-        5. **Rating & Social Proof**  
-        - Rating: ⭐ {data["Feedback"]} out of 5  
-        - Sales: {data["Sales180Day"]} sold in the last 180 days
-
-        6. **Hashtags**  
-        - Add exactly 17 highly relevant hashtags for the product’s niche, features, and shopping intent.  
-        - Use a mix of general and specific hashtags.  
-        - Use hashtags in English unless {leng} is Hebrew, then translate/adapt them.
-
-        Write the post in {leng}. Use an engaging, friendly, and sales-oriented tone. Avoid sounding robotic. Use emojis only if natural.
+        You are an expert social media content creator specializing in high-converting posts.  
+        Your content must be engaging, clear, and emotionally compelling to deeply resonate with the target audience.  
+        Focus on concise, persuasive language that drives immediate action and boosts traffic and sales.  
+        Maintain a professional yet approachable tone, blending authority with warmth.  
+        Create a sense of urgency without being pushy, encouraging users to act now.  
+        Ensure every post aligns perfectly with the brand’s voice and messaging strategy.
         """
 
     
+    # יצירת הפורמט של הפוסט עם פרטי המוצר
+    prompt = f"""
+        You are a professional social media copywriter and performance marketer. Create a **high-converting Facebook post** that presents the following product in a way that feels 100% natural, human-written, and emotionally engaging in {leng}.
+
+        The post must read like it was written by an experienced native copywriter — warm, persuasive, fluent, and never robotic or generic.
+
+        Use the following product data:
+
+        - Product link: {data["PromotionUrl"]}
+        - Product description (raw): {data["ProductDesc"]}
+        - Original price: {data["OriginPrice"]} USD
+        - Discounted price: {data["DiscountPrice"]} USD
+        - Discount: {data["Discount"]}% OFF
+        - Rating: {data["Feedback"]} out of 5
+        - Sales in last 180 days: {data["Sales180Day"]}
+        - Product category: {data["Category"]}
+        - Use emojis: True
+
+        **If a clean product name is not provided, extract a short and natural-sounding product name from the raw description, and use it once in the post.**
+
+        Follow this exact structure and requirements:
+
+        ---
+
+        1. **Link (first line, standalone)**  
+        🔗 {data["PromotionUrl"]}
+
+        ---
+
+        2. **Headline (bold, emotional, and attention-grabbing)**  
+        - One short sentence (5–12 words) that instantly grabs attention.  
+        - Highlight the biggest **benefit**, **pain point**, or **urgency**.  
+        - Write naturally in {leng}, no generic or AI-like phrasing.  
+        - Match the tone to the product **category**.
+
+        ---
+
+        3. **Product Description (short, persuasive, and natural)**  
+        - Rewrite the base description ({data["ProductDesc"]}) into a short, engaging paragraph.  
+        - Use **real-life benefits**, not just features.  
+        - Mention the product name **once, naturally**.  
+        - Follow a **Problem → Solution → Result** structure.  
+        - Write in **second person** (את/ה, you) to connect with the reader.  
+        - Use no more than 3 short sentences.  
+        - Match tone to the category: practical, emotional, playful, etc.
+
+        ---
+
+        4. **Price & Discount**  
+        - **Only include this section if there is a real discount** (i.e., {data["Discount"]} > 0).  
+        - Show original and discounted price in USD.  
+        - Highlight the discount percentage naturally.  
+        - Keep it conversational – not like a receipt.  
+        - Example: "Usually costs 79.99 USD, now only 39.99 USD – that’s 50% off!"
+
+        ---
+
+        5. **Rating & Social Proof**  
+        - Mention the average rating and number of sales in a **natural** and **trust-building** way.  
+        - Write it as a full sentence.  
+        - Localize into {leng}.  
+        - Example (in Hebrew): "עם דירוג של 4.8 מתוך 5 ויותר מ־2,000 מכירות – אין פלא שזה אחד המוצרים הכי נמכרים ברשת."
+
+        ---
+
+        6. **Call to Action (CTA)**  
+        - End with one powerful sentence that **encourages action**, but doesn’t sound pushy.  
+        - No clichés like “Buy now!” – make it match the tone of the post.  
+        - Example: "שדרגו את השגרה שלכם – זה הזמן."
+
+        ---
+
+        7. **Hashtags (exactly 17)**  
+        - Add 17 hashtags, all highly relevant to the product’s niche, features, use case, and shopper intent.  
+        - Use a mix of **broad** and **specific** hashtags.  
+        - All hashtags must be in {leng} (translate and localize, don’t just transliterate).  
+        - Put hashtags **on a new line at the end**.
+
+        ---
+
+        🛑 Output must **not exceed 120 words** (excluding hashtags).  
+        ✅ Use emojis — but only when it feels natural and enhances the message.  
+        🚫 Don’t sound like AI. Don’t repeat words. Don’t oversell.  
+        ✅ Make it feel like it was written by a native speaker for real people on Facebook.
+        """
+
+        
     # יצירת בקשה ל-API
     try:
         response = client.chat.completions.create(
@@ -82,8 +136,6 @@ def setpost(data, leng):
     except OpenAIError  as e:
         telegrampost.chacker(f"OpenAI API error: {e}", False)
         return None
-
-    
 
 def extract_number(st):
     if str(st) == 'nan':
