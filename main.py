@@ -98,6 +98,6 @@ while True:
     #    num = 1
 
     telegrampost.chacker('stop sending massages', True)
-    print('going to sleep for 1 hour and 12 minutes')
-    time.sleep(4320)
+    print('going to sleep for 1 hour and 20 minutes')
+    time.sleep(4900)
 
