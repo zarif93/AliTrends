@@ -44,7 +44,7 @@ def haspost(data, language):
         database.insertpost(data, language)
         return data
      
-num = 1
+#num = 1
 while True:
 
     telegrampost.chacker('start sending massages', True)
@@ -75,26 +75,27 @@ while True:
             time_sleep = 30
 
         # post to facebook
-        if num % 2 == 0:
-            # sec time to facebook
-            if facebook_id == 'false':
-                print(f'{facebook_key_id} has no Facebook page')
-            else:
-                print(f'{telegram_key_id} post to facebook productid {data["ProductId"]}')
-                token = pagetoken.get(facebook_id)
-                postid = facebook.facepost(post, facebook_id, token)
+        #if num % 2 == 0:
+        # sec time to facebook
+        
+        if facebook_id == 'false':
+            print(f'{facebook_key_id} has no Facebook page')
+        else:
+            print(f'{telegram_key_id} post to facebook productid {data["ProductId"]}')
+            token = pagetoken.get(facebook_id)
+            postid = facebook.facepost(post, facebook_id, token)
 
-                if list == 'main' and postid:
-                    linktolike = facebook.get_url_link(postid, token)
+            if list == 'main' and postid:
+                linktolike = facebook.get_url_link(postid, token)
 
-                    if linktolike:
-                        smm.set_order(linktolike)
+                if linktolike:
+                    smm.set_order(linktolike)
 
         time.sleep(time_sleep)
 
-    num = num + 1
-    if num == 11:
-        num = 1
+    #num = num + 1
+    #if num == 11:
+    #    num = 1
 
     #  need to sleep 3600 sec
     print('going to sleep for 1 hour')
