@@ -77,7 +77,7 @@ while True:
         # post to facebook
         #if num % 2 == 0:
         # sec time to facebook
-        
+
         if facebook_id == 'false':
             print(f'{facebook_key_id} has no Facebook page')
         else:
@@ -97,7 +97,7 @@ while True:
     #if num == 11:
     #    num = 1
 
-    #  need to sleep 3600 sec
-    print('going to sleep for 1 hour')
     telegrampost.chacker('stop sending massages', True)
-    time.sleep(3000)
+    print('going to sleep for 1 hour and 12 minutes')
+    time.sleep(4320)
+

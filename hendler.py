@@ -173,15 +173,6 @@ What is the category for this product?
     except OpenAIError  as e:
         telegrampost.chacker(f"OpenAI API error: {e}", False)
         return None 
-    
-############################################
-# TO DO 
-# 1. add Origin Price to database
-# 2. add % Discount to database
-# 3. delete Video Url from database
-# 4. add % Discount to post
-# 5. rewirthing the post to be more engaging and clear
-############################################
 
 def insetdata(data):
 
