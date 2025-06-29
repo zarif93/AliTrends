@@ -7,6 +7,7 @@ import database
 import telegrampost
 import facebook
 import smm
+from datetime import datetime
 
 load_dotenv()
 
@@ -46,8 +47,15 @@ def haspost(data, language):
      
 #num = 1
 while True:
+    now = datetime.now()
+    day_of_week_number = now.weekday() # 4= Friday
 
-    telegrampost.chacker('start sending massages', True)
+    if now.hour > 14 and day_of_week_number == 4:
+        telegrampost.chacker('עוצרים לכבוד שבת ', False)
+        time.sleep(60*60*40)  # sleep for 40 hours
+        telegrampost.chacker('שבת יצאה שבוע טוב! ', False)
+        
+    #telegrampost.chacker('start sending massages', True)
     pagetoken = facebook.get_tokens()
     time_sleep = 1
 
@@ -97,7 +105,7 @@ while True:
     #if num == 11:
     #    num = 1
 
-    telegrampost.chacker('stop sending massages', True)
+    #telegrampost.chacker('stop sending massages', True)
     print('going to sleep for 1 hour and 20 minutes')
     time.sleep(4900)
 
