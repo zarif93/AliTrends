@@ -93,11 +93,10 @@ while True:
             token = pagetoken.get(facebook_id)
             postid = facebook.facepost(post, facebook_id, token)
 
-            if list == 'main' and postid:
-                linktolike = facebook.get_url_link(postid, token)
-
-                if linktolike:
-                    smm.set_order(linktolike)
+#            if list == 'main' and postid:
+#                linktolike = facebook.get_url_link(postid, token)
+#                if linktolike:
+#                    smm.set_order(linktolike)
 
         time.sleep(time_sleep)
 
