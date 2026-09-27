@@ -6,6 +6,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 
 from .aliexpress import AliExpressClient
@@ -47,29 +48,73 @@ class Bot:
         self.copywriter = Copywriter(settings.openai_api_key, settings.openai_model, self.storage)
         self.telegram = TelegramPublisher(settings.telegram_token, settings.admin_chat_id)
         self.facebook = FacebookPublisher(settings.facebook_user_token) if settings.facebook_user_token else None
+        self._errors_since_report = 0
 
     # --- loop ----------------------------------------------------------------
 
     def run_forever(self, *, once: bool = False, limit: int | None = None, only: str | None = None) -> None:
         log.info("Starting: %d channels, dry_run=%s", len(self.settings.channels), self.dry_run)
+        if not self.dry_run:
+            # Several of these in a row mean the service keeps crashing and systemd keeps restarting it.
+            self.telegram.notify_admin(f"🟢 AliTrends עלה ({len(self.settings.channels)} ערוצים)", silent=True)
         while True:
             try:
                 report = self.run_cycle(limit=limit, only=only)
                 log.info(report.summary())
+                self._errors_since_report += len(report.errors)
                 if report.errors and not self.dry_run:
                     self.telegram.notify_admin(report.summary(), silent=True)
             except Exception as exc:  # last line of defence: log, alert, keep the bot alive
                 log.exception("Cycle crashed")
+                self._errors_since_report += 1
                 if not self.dry_run:
                     self.telegram.notify_admin(f"❌ Cycle crashed: {exc!r}")
                 if once:
                     raise
-                time.sleep(300)
+                self._sleep(300)
                 continue
             if once:
                 return
             log.info("Sleeping %ds until next cycle", self.settings.cycle_sleep_seconds)
-            time.sleep(self.settings.cycle_sleep_seconds)
+            self._sleep(self.settings.cycle_sleep_seconds)
+
+    def _sleep(self, seconds: float) -> None:
+        """Sleep in short slices so the daily report still goes out on time during long waits."""
+        end = time.monotonic() + seconds
+        while (left := end - time.monotonic()) > 0:
+            time.sleep(min(left, 300))
+            self._maybe_daily_report()
+
+    def _maybe_daily_report(self) -> None:
+        now = now_israel()
+        today = now.date().isoformat()
+        if self.dry_run or now.hour < self.settings.daily_report_hour:
+            return
+        if self.storage.get_meta("daily_report_date") == today:
+            return
+        try:
+            self.telegram.notify_admin(self.daily_report_text(now), silent=True)
+        finally:
+            # Marked as sent even if Telegram failed, so a broken token doesn't retry every 5 minutes.
+            self.storage.set_meta("daily_report_date", today)
+            self._errors_since_report = 0
+
+    def daily_report_text(self, now: datetime) -> str:
+        since = now - timedelta(hours=24)
+        by_platform = self.storage.stats_since(since)
+        by_language = self.storage.stats_by_language_since(since)
+        total = sum(by_platform.values())
+        lines = [
+            f"{'📊' if total else '⚠️'} סיכום יומי {now:%d/%m}",
+            f"פורסמו ב-24 השעות האחרונות: {total}"
+            f" (טלגרם {by_platform.get('telegram', 0)} · פייסבוק {by_platform.get('facebook', 0)})",
+        ]
+        if by_language:
+            lines.append("לפי שפה: " + ", ".join(f"{lang} {n}" for lang, n in by_language.items()))
+        lines.append(f"שגיאות: {self._errors_since_report}")
+        if not total:
+            lines.append("לא פורסם כלום. כדאי לבדוק את הלוג: journalctl -u alitrends -n 100")
+        return "\n".join(lines)
 
     def run_cycle(self, limit: int | None = None, only: str | None = None) -> CycleReport:
         report = CycleReport()
@@ -84,6 +129,7 @@ class Bot:
         for index, channel in enumerate(channels):
             self._wait_out_shabbat()
             posted = self._process(channel, report)
+            self._maybe_daily_report()
             if posted and index < len(channels) - 1 and not self.dry_run:
                 time.sleep(self.settings.post_delay_seconds)
         return report
@@ -96,7 +142,7 @@ class Bot:
         if not self.dry_run:
             self.telegram.notify_admin("עוצרים לכבוד שבת 🕯️", silent=False)
         while now_israel() < until:
-            time.sleep(min(600, max(1, (until - now_israel()).total_seconds())))
+            self._sleep(min(600, max(1, (until - now_israel()).total_seconds())))
         if not self.dry_run:
             self.telegram.notify_admin("שבת יצאה, שבוע טוב! ✨", silent=False)
 

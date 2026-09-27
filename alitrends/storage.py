@@ -25,6 +25,11 @@ CREATE TABLE IF NOT EXISTS publications (
     published_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_publications_channel ON publications (channel_key, published_at);
+
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 
@@ -81,3 +86,22 @@ class Storage:
             (since.isoformat(),),
         )
         return dict(rows.fetchall())
+
+    def stats_by_language_since(self, since: datetime) -> dict[str, int]:
+        """Channel keys are "<Language>/<category>", so the language is the part before the slash."""
+        rows = self._con.execute(
+            "SELECT substr(channel_key, 1, instr(channel_key, '/') - 1) AS language, COUNT(*)"
+            " FROM publications WHERE published_at >= ? GROUP BY language ORDER BY COUNT(*) DESC",
+            (since.isoformat(),),
+        )
+        return dict(rows.fetchall())
+
+    # --- small key/value state ----------------------------------------------
+
+    def get_meta(self, key: str) -> str | None:
+        row = self._con.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+        return row[0] if row else None
+
+    def set_meta(self, key: str, value: str) -> None:
+        with self._con:
+            self._con.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", (key, value))

@@ -94,6 +94,7 @@ class Settings:
     repost_cooldown_days: int
     pool_ttl_seconds: int
     shabbat_enabled: bool
+    daily_report_hour: int  # Israel time
     channels: tuple[Channel, ...] = field(default_factory=tuple)
 
     @classmethod
@@ -133,5 +134,6 @@ class Settings:
             repost_cooldown_days=int(os.getenv("REPOST_COOLDOWN_DAYS", "21")),
             pool_ttl_seconds=int(os.getenv("POOL_TTL_SECONDS", str(6 * 3600))),
             shabbat_enabled=_env_bool("SHABBAT_ENABLED", True),
+            daily_report_hour=int(os.getenv("DAILY_REPORT_HOUR", "21")),
             channels=tuple(c for c in channels if c.telegram_id or c.facebook_page_id),
         )
