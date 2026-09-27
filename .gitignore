@@ -1,6 +1,16 @@
+# secrets and data
 *.env
+.env
 *.db
-aliexpress.db
+*.db-wal
+*.db-shm
 /csvs
-test.py
+/logs
 
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+test.py
