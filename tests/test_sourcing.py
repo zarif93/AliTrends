@@ -1,27 +1,50 @@
+from dataclasses import replace
 from decimal import Decimal
 
-from alitrends.aliexpress import Product
+import pytest
+
+from alitrends.aliexpress import AliExpressError, Product
 from alitrends.config import MARKETS
-from alitrends.sourcing import ProductSource, QualityBar, passes, score
+from alitrends.sourcing import ProductSource, QualityBar, passes, rank_key, score
 from alitrends.storage import Storage
 
+MARKET = MARKETS["English"]
+CATEGORY = "Toys & Kids"
+CHANNEL = "English/Toys & Kids"
 
-def make(pid, discount=40, sales=1000, rating=4.8, commission=7.0):
+
+def make(pid, discount=40, sales=1000, rating=4.8, commission=7.0, hot=False):
     return Product(pid, f"title {pid}", "img", "link", Decimal("10"), Decimal("20"), "USD",
-                   discount, rating, sales, commission, "cat")
+                   discount, rating, sales, commission, "cat", hot)
 
 
 class FakeClient:
-    def __init__(self, products):
+    """Returns `products` on page 1 and nothing after; `hot` may be a list or an exception."""
+
+    def __init__(self, products, hot=()):
         self.products = products
-        self.calls = 0
+        self.hot = hot
+        self.calls = {"search": 0, "hot": 0}
 
     def short_link(self, url):
         return url + "/short"
 
     def search_products(self, **kwargs):
-        self.calls += 1
+        self.calls["search"] += 1
         return self.products if kwargs["page"] == 1 else []
+
+    def hot_products(self, **kwargs):
+        self.calls["hot"] += 1
+        if isinstance(self.hot, Exception):
+            raise self.hot
+        return [replace(p, hot=True) for p in self.hot] if kwargs["page"] == 1 else []
+
+
+@pytest.fixture
+def storage(tmp_path):
+    s = Storage(str(tmp_path / "t.db"))
+    yield s
+    s.close()
 
 
 def test_quality_filter():
@@ -38,18 +61,57 @@ def test_score_prefers_better_deals():
     assert score(make("a", sales=50_000)) > score(make("b", sales=200))
 
 
-def test_pick_skips_recent_and_caches_pool(tmp_path):
-    storage = Storage(str(tmp_path / "t.db"))
+def test_hot_ranks_above_better_scoring_regular():
+    assert rank_key(make("h", discount=20, hot=True)) > rank_key(make("r", discount=80))
+
+
+def test_pick_skips_recent_and_caches_pool(storage):
     client = FakeClient([make("1"), make("2"), make("3", rating=3.0)])
     source = ProductSource(client, storage, pool_ttl=3600, cooldown_days=7)
-    market = MARKETS["English"]
 
-    storage.record_publication("English/Toys & Kids", "telegram", "1", "m1", "10", "USD")
-    picks = {source.pick(market, "Toys & Kids", "English/Toys & Kids").product_id for _ in range(20)}
-    assert picks == {"2"}
-    assert source.pick(market, "Toys & Kids", "English/Toys & Kids").promotion_link == "link/short"          # "1" was posted recently, "3" fails the quality bar
-    assert client.calls == 2       # page 1 + empty page 2, then served from cache
+    storage.record_publication(CHANNEL, "telegram", "1", "m1", "10", "USD")
+    picks = {source.pick(MARKET, CATEGORY, CHANNEL).product_id for _ in range(20)}
+    assert picks == {"2"}          # "1" was posted recently, "3" fails the quality bar
+    assert source.pick(MARKET, CATEGORY, CHANNEL).promotion_link == "link/short"
+    assert client.calls == {"hot": 1, "search": 2}  # one refresh (empty hot page stops paging), then cached
 
-    storage.record_publication("English/Toys & Kids", "telegram", "2", "m2", "10", "USD")
-    assert source.pick(market, "Toys & Kids", "English/Toys & Kids") is None
-    storage.close()
+    storage.record_publication(CHANNEL, "telegram", "2", "m2", "10", "USD")
+    assert source.pick(MARKET, CATEGORY, CHANNEL) is None
+
+
+def test_hot_first_then_topped_up_from_search(storage):
+    hot = [make("h1"), make("h2", discount=0)]            # h2 fails the discount rule in the US
+    regular = [make("h1", discount=90), make("r1", discount=90)]  # h1 duplicate: hot version wins
+    client = FakeClient(regular, hot=hot)
+    source = ProductSource(client, storage, pool_ttl=3600, cooldown_days=7, min_candidates=30)
+
+    pool = source.pool(MARKET, CATEGORY)
+    assert [p.product_id for p in pool] == ["h1", "r1"]
+    assert pool[0].hot and pool[0].discount == 40 and not pool[1].hot
+
+
+def test_enough_hot_skips_search(storage):
+    client = FakeClient([make("r1")], hot=[make(f"h{i}") for i in range(5)])
+    source = ProductSource(client, storage, pool_ttl=3600, cooldown_days=7, min_candidates=5)
+
+    pool = source.pool(MARKET, CATEGORY)
+    assert len(pool) == 5 and all(p.hot for p in pool)
+    assert client.calls["search"] == 0
+
+
+def test_hot_failure_falls_back_and_backs_off(storage):
+    client = FakeClient([make("r1"), make("r2")], hot=AliExpressError("InsufficientPermission"))
+    source = ProductSource(client, storage, pool_ttl=0, cooldown_days=7)
+
+    assert [p.product_id for p in source.pool(MARKET, CATEGORY)] == ["r1", "r2"]
+    assert client.calls["hot"] == 1
+    source.pool(MARKET, "Beauty & Health")          # another refresh within the back-off window
+    assert client.calls["hot"] == 1                 # hot not retried
+    assert client.calls["search"] == 4
+
+
+def test_main_pool_keeps_hot_priority(storage):
+    client = FakeClient([make("r1", discount=90)], hot=[make("h1", discount=20)])
+    source = ProductSource(client, storage, pool_ttl=3600, cooldown_days=7)
+    pool = source.pool(MARKET, "main")
+    assert [p.product_id for p in pool] == ["h1", "r1"]

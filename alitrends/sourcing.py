@@ -39,9 +39,17 @@ def passes(p: Product, bar: QualityBar, market: Market) -> bool:
     )
 
 
+def rank_key(p: Product) -> tuple[bool, float]:
+    """Hot products (boosted commission) come first; score orders within each group."""
+    return (p.hot, score(p))
+
+
 class ProductSource:
+    HOT_BACKOFF_SECONDS = 6 * 3600  # after a hotproduct.query failure, use only product.query for a while
+
     def __init__(self, client: AliExpressClient, storage: Storage, *, pool_ttl: int,
-                 cooldown_days: int, pages: int = 2, bar: QualityBar = QualityBar(), top_k: int = 15):
+                 cooldown_days: int, pages: int = 2, bar: QualityBar = QualityBar(), top_k: int = 15,
+                 min_candidates: int = 30):
         self._client = client
         self._storage = storage
         self._ttl = pool_ttl
@@ -49,13 +57,18 @@ class ProductSource:
         self._pages = pages
         self._bar = bar
         self._top_k = top_k
+        self._min_candidates = min_candidates
+        self._hot_disabled_until = 0.0
         self._pools: dict[tuple[str, str], tuple[float, list[Product]]] = {}
 
     def pool(self, market: Market, category: str) -> list[Product]:
-        """Scored, filtered candidates for a market+category, cached for `pool_ttl` seconds."""
+        """Filtered candidates for a market+category, hot first, cached for `pool_ttl` seconds."""
         if category == MAIN:
-            merged = {p.product_id: p for cat in CATEGORIES for p in self.pool(market, cat)}
-            return sorted(merged.values(), key=score, reverse=True)
+            merged: dict[str, Product] = {}
+            for cat in CATEGORIES:
+                for p in self.pool(market, cat):
+                    merged.setdefault(p.product_id, p)
+            return sorted(merged.values(), key=rank_key, reverse=True)
 
         key = (market.language, category)
         cached = self._pools.get(key)
@@ -63,27 +76,42 @@ class ProductSource:
             return cached[1]
 
         products: dict[str, Product] = {}
-        for page in range(1, self._pages + 1):
-            try:
-                batch = self._client.search_products(
-                    category_ids=CATEGORIES[category], language=market.api_language,
-                    currency=market.currency, country=market.country, page=page,
-                )
-            except AliExpressError as exc:
-                log.error("Fetching %s/%s page %d failed: %s", market.language, category, page, exc)
-                break
-            products.update((p.product_id, p) for p in batch if passes(p, self._bar, market))
-            if not batch:
-                break
+        hot_count = 0
+        if time.monotonic() >= self._hot_disabled_until:
+            self._collect(market, category, products, hot=True)
+            hot_count = len(products)
+        if len(products) < self._min_candidates:
+            self._collect(market, category, products, hot=False)
 
-        ranked = sorted(products.values(), key=score, reverse=True)
+        ranked = sorted(products.values(), key=rank_key, reverse=True)
         if ranked or not cached:
             self._pools[key] = (time.monotonic(), ranked)
         else:
             log.warning("Empty refresh for %s/%s, keeping previous pool", market.language, category)
             ranked = cached[1]
-        log.info("Pool %s/%s: %d candidates", market.language, category, len(ranked))
+        log.info("Pool %s/%s: %d candidates (%d hot)", market.language, category, len(ranked), hot_count)
         return ranked
+
+    def _collect(self, market: Market, category: str, into: dict[str, Product], *, hot: bool) -> None:
+        """Add passing products from up to `pages` pages; products already collected (e.g. hot) win."""
+        fetch = self._client.hot_products if hot else self._client.search_products
+        for page in range(1, self._pages + 1):
+            try:
+                batch = fetch(category_ids=CATEGORIES[category], language=market.api_language,
+                              currency=market.currency, country=market.country, page=page)
+            except AliExpressError as exc:
+                if hot:
+                    self._hot_disabled_until = time.monotonic() + self.HOT_BACKOFF_SECONDS
+                    log.warning("Hot products unavailable (%s); using product.query only for %dh",
+                                exc, self.HOT_BACKOFF_SECONDS // 3600)
+                else:
+                    log.error("Fetching %s/%s page %d failed: %s", market.language, category, page, exc)
+                return
+            for p in batch:
+                if passes(p, self._bar, market):
+                    into.setdefault(p.product_id, p)
+            if not batch:
+                return
 
     def pick(self, market: Market, category: str, channel_key: str) -> Product | None:
         """Pick a fresh product for a channel: weighted-random among the best not posted recently."""

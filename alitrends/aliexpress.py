@@ -5,7 +5,7 @@ import hashlib
 import hmac
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable
 
@@ -39,6 +39,7 @@ class Product:
     sales: int             # recent sales volume
     commission_rate: float # percent
     category: str
+    hot: bool = False      # came from hotproduct.query
 
     @classmethod
     def from_api(cls, raw: dict[str, Any]) -> "Product | None":
@@ -154,11 +155,19 @@ class AliExpressClient:
             log.warning("Short link failed, using the long one: %s", exc)
             return url
 
-    def search_products(self, *, category_ids: Iterable[str] = (), keywords: str | None = None,
-                        language: str = "EN", currency: str = "USD", country: str = "US",
-                        sort: str = "LAST_VOLUME_DESC", page: int = 1, page_size: int = 50) -> list[Product]:
+    def search_products(self, **kwargs: Any) -> list[Product]:
+        """Regular catalogue search (aliexpress.affiliate.product.query)."""
+        return self._query("aliexpress.affiliate.product.query", hot=False, **kwargs)
+
+    def hot_products(self, **kwargs: Any) -> list[Product]:
+        """Hot products with boosted commission (Advanced API permission required)."""
+        return self._query("aliexpress.affiliate.hotproduct.query", hot=True, **kwargs)
+
+    def _query(self, method: str, *, hot: bool, category_ids: Iterable[str] = (), keywords: str | None = None,
+               language: str = "EN", currency: str = "USD", country: str = "US",
+               sort: str = "LAST_VOLUME_DESC", page: int = 1, page_size: int = 50) -> list[Product]:
         result = self.call(
-            "aliexpress.affiliate.product.query",
+            method,
             category_ids=",".join(category_ids) or None,
             keywords=keywords,
             target_language=language,
@@ -170,4 +179,5 @@ class AliExpressClient:
             tracking_id=self.tracking_id,
         )
         raw_products = (result.get("products") or {}).get("product") or []
-        return [p for p in map(Product.from_api, raw_products) if p]
+        products = [p for p in map(Product.from_api, raw_products) if p]
+        return [replace(p, hot=True) for p in products] if hot else products
