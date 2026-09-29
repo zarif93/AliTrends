@@ -116,3 +116,13 @@ def test_backup(s, tmp_path):
     s.create_channel("Hebrew", "main")
     s.backup_to(str(tmp_path / "copy.db"))
     assert [c.key for c in Storage(str(tmp_path / "copy.db")).channels()] == ["Hebrew/main"]
+
+
+def test_scrub_secrets_removes_stray_tokens_everywhere(s):
+    cid = s.create_channel("Hebrew", "main")
+    s.create_target(cid, "pinterest", "board", secret="panel-password")
+    s.create_target(cid, "threads", "u1", secret="real-token")
+    assert s.scrub_secrets(["threads"]) == 1
+    secrets = {t.platform: t.secret for t in s.channel(cid).targets}
+    assert secrets == {"pinterest": None, "threads": "real-token"}
+    assert "panel-password" not in str(s.audit_log())

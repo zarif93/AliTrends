@@ -83,7 +83,7 @@
         {% if PLATFORMS[t.platform].needs_target_secret %}
           <details class="inline-details"><summary class="button small">החלף טוקן</summary>
             <form method="post" action="{{ url_for('target_secret', target_id=t.id) }}">
-              {{ csrf() }}<input name="secret" type="password" placeholder="טוקן חדש" required autocomplete="off"><button class="small primary">שמור</button>
+              {{ csrf() }}<input name="secret" type="password" placeholder="טוקן חדש" required autocomplete="new-password"><button class="small primary">שמור</button>
             </form>
           </details>
         {% endif %}
@@ -103,7 +103,7 @@
         </select>
       </label>
       <label class="grow">מזהה<input name="target_id" dir="ltr" autocomplete="off" data-target-id></label>
-      <label class="grow" data-secret-field hidden>טוקן<input name="secret" type="password" dir="ltr" autocomplete="off"></label>
+      <label class="grow" data-secret-field hidden>טוקן<input name="secret" type="password" dir="ltr" autocomplete="new-password"></label>
       <label>שם לתצוגה (לא חובה)<input name="label"></label>
     </div>
     <p class="hint" data-platform-hint></p>

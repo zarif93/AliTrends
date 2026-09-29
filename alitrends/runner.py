@@ -59,6 +59,9 @@ def ensure_seeded(storage: Storage) -> None:
     created = storage.seed_from_env(legacy_channels_from_env(), legacy_tuning_from_env())
     if created:
         log.info("Imported %d channels from .env into the database", created)
+    scrubbed = storage.scrub_secrets(name for name, cls in PLATFORM_CLASSES.items() if cls.needs_target_secret)
+    if scrubbed:
+        log.warning("Removed %d stray tokens from targets that don't use one", scrubbed)
 
 
 class Bot:

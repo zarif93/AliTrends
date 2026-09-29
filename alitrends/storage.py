@@ -434,6 +434,26 @@ class Storage:
         allowed = {"target_id", "enabled", "label", "secret", "secret_expires_at"}
         self._update("targets", target_id, {k: v for k, v in fields.items() if k in allowed}, "יעד", audit=audit)
 
+    def scrub_secrets(self, keep_platforms: Iterable[str]) -> int:
+        """Remove tokens stored on targets of platforms that don't use one, including in the audit log."""
+        keep = tuple(keep_platforms)
+        marks = ", ".join("?" for _ in keep) or "''"
+        with self._con:
+            cur = self._con.execute(
+                f"UPDATE targets SET secret = NULL WHERE secret IS NOT NULL AND platform NOT IN ({marks})", keep)
+            changed = cur.rowcount
+            for row in self._rows("SELECT id, before, after FROM audit_log WHERE entity = 'targets'"):
+                cleaned = {}
+                for column in ("before", "after"):
+                    data = json.loads(row[column]) if row[column] else None
+                    if data and data.get("secret") and data.get("platform") not in keep:
+                        data["secret"] = None
+                        cleaned[column] = json.dumps(data, ensure_ascii=False)
+                if cleaned:
+                    self._con.execute(f"UPDATE audit_log SET {', '.join(f'{c} = ?' for c in cleaned)} WHERE id = ?",
+                                      (*cleaned.values(), row["id"]))
+        return changed
+
     def delete_target(self, target_id: int) -> None:
         before = self._snapshot("targets", target_id)
         if not before:

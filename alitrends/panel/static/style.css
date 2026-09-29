@@ -39,6 +39,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }  /* our display:block on labels must not override it */
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;

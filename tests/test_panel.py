@@ -229,3 +229,12 @@ def test_pinterest_connect_flow(tmp_path, monkeypatch):
     client.get(f"/pinterest/callback?code=c&state={state}")
     assert pin.connected_as() == "shop" and pin.seen == ("c", "http://localhost/pinterest/callback")
     storage.close()
+
+
+def test_hidden_token_field_is_ignored_for_platforms_without_tokens(env):
+    client, storage, telegram = env
+    login(client, telegram)
+    cid = storage.create_channel("Hebrew", "main")
+    client.post(f"/channels/{cid}/targets", data={"_csrf": session_csrf(client), "platform": "telegram",
+                                                  "target_id": "55", "secret": "autofilled-password"})
+    assert storage.channel(cid).targets[0].secret is None

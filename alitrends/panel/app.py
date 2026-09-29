@@ -388,6 +388,8 @@ def create_app(secrets_: Secrets, *, telegram: TelegramPublisher | None = None,
         platform = platforms.get(platform_name)
         target_id = request.form.get("target_id", "").strip()
         secret = request.form.get("secret", "").strip() or None
+        if platform and not platform.needs_target_secret:
+            secret = None  # e.g. a password manager filling the hidden token field
         label = request.form.get("label", "").strip()
         if not platform:
             flash("רשת לא מוכרת", "error")
