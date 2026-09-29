@@ -11,8 +11,8 @@
       <input type="hidden" name="action" value="password">
       <label>שם משתמש<input name="username" value="{{ session.user }}" autocomplete="username" required></label>
       <label>סיסמה נוכחית<input type="password" name="current" autocomplete="current-password" required></label>
-      <label>סיסמה חדשה (10 תווים לפחות)<input type="password" name="new" minlength="10" autocomplete="new-password" required></label>
-      <label>שוב<input type="password" name="confirm" minlength="10" autocomplete="new-password" required></label>
+      <label>סיסמה חדשה (5 תווים לפחות)<input type="password" name="new" minlength="5" autocomplete="new-password" required></label>
+      <label>שוב<input type="password" name="confirm" minlength="5" autocomplete="new-password" required></label>
       <button class="primary">עדכון</button>
     </form>
   </section>

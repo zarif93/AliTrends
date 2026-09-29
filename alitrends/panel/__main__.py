@@ -66,7 +66,7 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command == "set-password":
         username = input("Username: ").strip()
-        password = getpass.getpass("Password (10+ characters): ")
+        password = getpass.getpass("Password (5+ characters): ")
         if password != getpass.getpass("Repeat password: "):
             sys.exit("Passwords do not match")
         try:
