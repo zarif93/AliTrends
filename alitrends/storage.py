@@ -646,6 +646,27 @@ class Storage:
         return self._con.execute(sql, params).fetchone()[0]
 
 
+class DbKeyValue:
+    """Meta-table access that is safe from any thread: each call opens its own short connection."""
+
+    def __init__(self, path: str):
+        self._path = path
+
+    def get(self, key: str) -> str | None:
+        storage = Storage(self._path)
+        try:
+            return storage.get_meta(key)
+        finally:
+            storage.close()
+
+    def set(self, key: str, value: str) -> None:
+        storage = Storage(self._path)
+        try:
+            storage.set_meta(key, value)
+        finally:
+            storage.close()
+
+
 def _target(row: dict) -> Target:
     return Target(id=row["id"], channel_id=row["channel_id"], platform=row["platform"], target_id=row["target_id"],
                   enabled=bool(row["enabled"]), label=row["label"] or "", secret=row["secret"],

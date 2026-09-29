@@ -189,3 +189,43 @@ def test_audit_restore_from_panel(env):
     entry = storage.audit_log()[0]
     client.post(f"/audit/{entry['id']}/restore", data={"_csrf": token})
     assert storage.channel(cid) is not None
+
+
+def test_pinterest_connect_flow(tmp_path, monkeypatch):
+    from urllib.parse import parse_qs, urlparse
+
+    from alitrends.platforms.pinterest import PinterestPlatform
+
+    class Memory(dict):
+        def set(self, key, value):
+            self[key] = value
+
+    class FakePin(PinterestPlatform):
+        def connect(self, code, redirect_uri):
+            self.seen = (code, redirect_uri)
+            self._set("refresh_token", "r")
+            self._set("username", "shop")
+            return "shop"
+
+    monkeypatch.setenv("PANEL_COOKIE_SECURE", "0")
+    secrets = Secrets("k", "s", "t", "ai", "bot", "admin", None, str(tmp_path / "t.db"), str(tmp_path))
+    storage = Storage(secrets.db_path)
+    auth.set_credentials(storage, "admin", "correct horse battery")
+    telegram = FakeTelegram()
+    pin = FakePin("app", "secret", Memory())
+    client = create_app(secrets, telegram=telegram, platforms={"pinterest": pin}).test_client()
+    login(client, telegram)
+
+    assert "localhost/pinterest/callback" in client.get("/settings").get_data(as_text=True)
+    r = client.get("/pinterest/connect")
+    query = parse_qs(urlparse(r.headers["Location"]).query)
+    assert r.headers["Location"].startswith("https://www.pinterest.com/oauth/") and query["client_id"] == ["app"]
+
+    client.get("/pinterest/callback?code=c&state=wrong")
+    assert pin.connected_as() is None                      # state mismatch is refused
+
+    r = client.get("/pinterest/connect")
+    state = parse_qs(urlparse(r.headers["Location"]).query)["state"][0]
+    client.get(f"/pinterest/callback?code=c&state={state}")
+    assert pin.connected_as() == "shop" and pin.seen == ("c", "http://localhost/pinterest/callback")
+    storage.close()

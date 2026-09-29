@@ -1,7 +1,7 @@
 # AliTrends
 
 Publishes curated AliExpress affiliate deals to Telegram channels, Facebook pages, Instagram business
-accounts and Threads, in six languages (English, Arabic, Portuguese, French, Spanish, Hebrew), and comes
+accounts, Threads and Pinterest boards, in six languages (English, Arabic, Portuguese, French, Spanish, Hebrew), and comes
 with a private admin panel for managing it all.
 
 ## How it works
@@ -36,6 +36,14 @@ audience's timezone).
 Channels, targets and tuning live in the SQLite database and are edited from the panel; the bot re-reads
 them every cycle. Secrets stay in `.env`. On the first start after upgrading, channels and tuning found in
 the old `.env` keys (`"Hebrew main"`, `"Hebrew Facebook main"`, `POST_DELAY_SECONDS`, …) are imported once.
+
+### Pinterest
+
+Create an app at developers.pinterest.com (needs a business account), add the redirect URI shown in the
+panel's settings page (`https://<server>.<tailnet>.ts.net/pinterest/callback`), put `PINTEREST_APP_ID`
+and `PINTEREST_APP_SECRET` in `.env`, restart both services, then click "connect" in the settings page.
+Each target is a board (by name or id). The headline becomes the pin title and the product link is the
+pin's link. New Pinterest apps start with trial access; request standard access so pins are public.
 
 ### Adding a social network
 

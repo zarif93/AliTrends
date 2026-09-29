@@ -82,6 +82,8 @@ class Secrets:
     facebook_user_token: str | None
     db_path: str
     log_dir: str
+    pinterest_app_id: str | None = None
+    pinterest_app_secret: str | None = None
 
     @classmethod
     def from_env(cls, env_file: str | Path | None = BASE_DIR / ".env") -> "Secrets":
@@ -103,6 +105,8 @@ class Secrets:
             facebook_user_token=os.getenv("FACE_TOKEN") or None,
             db_path=os.getenv("DB_PATH", str(BASE_DIR / "alitrends.db")),
             log_dir=os.getenv("LOG_DIR", str(BASE_DIR / "logs")),
+            pinterest_app_id=os.getenv("PINTEREST_APP_ID") or None,
+            pinterest_app_secret=os.getenv("PINTEREST_APP_SECRET") or None,
         )
 
 

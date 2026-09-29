@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Protocol
 
 import requests
 
@@ -23,6 +23,14 @@ class TokenInfo:
     ok: bool
     expires_at: datetime | None = None  # None = never expires or unknown
     message: str = ""
+
+
+class KeyValue(Protocol):
+    """Small persistent store for account-level tokens (backed by the meta table)."""
+
+    def get(self, key: str) -> str | None: ...
+
+    def set(self, key: str, value: str) -> None: ...
 
 
 # Called by a platform when it rotates a per-target token: (target row id, new token, expiry).

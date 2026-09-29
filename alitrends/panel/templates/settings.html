@@ -45,4 +45,27 @@
   </section>
   <div class="sticky-save"><button class="primary">שמירת הגדרות</button></div>
 </form>
+
+{% if pinterest %}
+<section class="card" id="pinterest">
+  <h2>📌 חשבון פינטרסט</h2>
+  {% if not pinterest.configured %}
+    <p>כדי לחבר פינטרסט צריך אפליקציה ב-<a href="https://developers.pinterest.com/apps/" target="_blank" rel="noopener noreferrer">developers.pinterest.com</a>:</p>
+    <ol class="small">
+      <li>יוצרים אפליקציה (צריך חשבון פינטרסט עסקי).</li>
+      <li>ב-Redirect URIs של האפליקציה מוסיפים את הכתובת: <span class="mono" dir="ltr">{{ pinterest.redirect_uri }}</span></li>
+      <li>מוסיפים ל-<span class="mono">.env</span> בשרת את <span class="mono">PINTEREST_APP_ID</span> ו-<span class="mono">PINTEREST_APP_SECRET</span>, ומפעילים מחדש את שני השירותים.</li>
+    </ol>
+  {% elif pinterest.user %}
+    <p>✅ מחובר כ-<b dir="ltr">@{{ pinterest.user }}</b>. הטוקן מתחדש אוטומטית.</p>
+    <form method="post" action="{{ url_for('pinterest_disconnect') }}" data-confirm="לנתק את חשבון הפינטרסט? הפרסום לפינטרסט ייעצר.">
+      {{ csrf() }}<button class="danger small">ניתוק</button>
+    </form>
+  {% else %}
+    <p>האפליקציה מוגדרת. לחצו כדי להתחבר לחשבון ולאשר גישה ללוחות.</p>
+    <p><a class="button primary" href="{{ url_for('pinterest_connect') }}">חיבור חשבון פינטרסט</a></p>
+    <p class="hint">כתובת ה-Redirect שצריכה להיות רשומה באפליקציה: <span class="mono" dir="ltr">{{ pinterest.redirect_uri }}</span></p>
+  {% endif %}
+</section>
+{% endif %}
 {% endblock %}

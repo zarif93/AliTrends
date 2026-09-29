@@ -24,6 +24,8 @@ STYLES: dict[str, PostStyle] = {
     "instagram": PostStyle(link_in_button=False, limit=2_200, max_hashtags=8),
     # Threads allows 500 characters and a single topic tag per post.
     "threads": PostStyle(link_in_button=False, limit=500, max_hashtags=1),
+    # The first line becomes the pin title; the link goes in the pin's own link field.
+    "pinterest": PostStyle(link_in_button=True, limit=500, max_hashtags=5),
 }
 
 CURRENCY_SYMBOLS = {"USD": "$", "ILS": "₪", "EUR": "€", "BRL": "R$", "GBP": "£"}

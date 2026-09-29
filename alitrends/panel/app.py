@@ -5,6 +5,7 @@ manual posts, commission sync, status refresh) is queued as a job that the bot p
 """
 from __future__ import annotations
 
+import hmac
 import os
 import re
 import secrets
@@ -503,8 +504,56 @@ def create_app(secrets_: Secrets, *, telegram: TelegramPublisher | None = None,
         groups: dict[str, list] = defaultdict(list)
         for spec in SETTING_FIELDS:
             groups[spec.group].append(spec)
+        pin = platforms.get("pinterest")
+        pinterest = {"configured": pin.configured, "user": pin.connected_as(),
+                     "redirect_uri": _public_url(url_for("pinterest_callback"))} if pin else None
         return render_template("settings.html", tuning=tuning, groups=groups, markets=MARKETS,
-                               value=lambda key: getattr(tuning, key))
+                               value=lambda key: getattr(tuning, key), pinterest=pinterest)
+
+    # --- connected accounts (OAuth) ------------------------------------------------------
+
+    def _public_url(path: str) -> str:
+        """The panel's address as the browser sees it (behind `tailscale serve` that's https://….ts.net)."""
+        base = os.getenv("PANEL_PUBLIC_URL", "").rstrip("/")
+        if not base:
+            host = request.headers.get("X-Forwarded-Host") or request.host
+            local = host.split(":")[0] in ("127.0.0.1", "localhost")
+            base = f"{'http' if local else 'https'}://{host}"
+        return base + path
+
+    def _pinterest():
+        pin = platforms.get("pinterest")
+        if not pin or not pin.configured:
+            abort(400, "חסרים PINTEREST_APP_ID ו-PINTEREST_APP_SECRET בקובץ .env")
+        return pin
+
+    @app.get("/pinterest/connect")
+    def pinterest_connect():
+        pin = _pinterest()
+        session["pinterest_state"] = secrets.token_urlsafe(16)
+        return redirect(pin.authorize_url(_public_url(url_for("pinterest_callback")), session["pinterest_state"]))
+
+    @app.get("/pinterest/callback")
+    def pinterest_callback():
+        pin = _pinterest()
+        expected = session.pop("pinterest_state", None) or ""
+        if request.args.get("error"):
+            flash(f"פינטרסט סירב: {request.args.get('error_description') or request.args['error']}", "error")
+        elif not expected or not hmac.compare_digest(expected, request.args.get("state", "")):
+            flash("החיבור לא הושלם (בקשה לא תקינה או ישנה). נסו שוב.", "error")
+        else:
+            try:
+                username = pin.connect(request.args.get("code", ""), _public_url(url_for("pinterest_callback")))
+                flash(f"חשבון הפינטרסט @{username} חובר. עכשיו אפשר להוסיף לוחות כיעדים בערוצים.", "ok")
+            except PublishError as exc:
+                flash(f"החיבור נכשל: {exc}", "error")
+        return redirect(url_for("settings_page") + "#pinterest")
+
+    @app.post("/pinterest/disconnect")
+    def pinterest_disconnect():
+        _pinterest().disconnect()
+        flash("חשבון הפינטרסט נותק", "ok")
+        return redirect(url_for("settings_page") + "#pinterest")
 
     # --- blacklist -------------------------------------------------------------------
 
