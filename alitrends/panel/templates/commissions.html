@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf %}
+{% block title %}עמלות{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>עמלות</h1>
+  <form method="post">{{ csrf() }}<button>סנכרון עכשיו</button></form>
+</div>
+<p class="muted">הזמנות מ-API השותפים של אליאקספרס, מסונכרנות פעם ביום (30 ימים אחורה). סנכרון אחרון: {{ synced_at|ago }}.
+  ההכנסות מתחלקות לפי Tracking ID, לכן כדאי לתת לכל ערוץ Tracking ID משלו.</p>
+
+<nav class="tabs">
+  {% for d in (7, 30, 90, 365) %}<a href="{{ url_for('commissions', days=d) }}" class="{{ 'active' if days == d }}">{{ d }} ימים</a>{% endfor %}
+</nav>
+
+<section class="card">
+  <h2>לפי Tracking ID</h2>
+  {% if rows %}
+  <div class="table-wrap"><table>
+    <tr><th>Tracking ID</th><th>ערוצים</th><th>הזמנות</th><th>מכירות</th><th>עמלה</th></tr>
+    {% for r in rows %}
+    <tr>
+      <td class="mono" dir="ltr">{{ r.tracking_id }}{% if r.tracking_id == default_tracking %} <span class="muted">(ברירת מחדל)</span>{% endif %}</td>
+      <td class="small">{% for key in channels_by_tracking.get(r.tracking_id, []) %}{{ key|channel_label }}{{ '، ' if not loop.last }}{% else %}<span class="muted">—</span>{% endfor %}</td>
+      <td>{{ r.orders }}</td>
+      <td>{{ '%.2f'|format(r.sales or 0) }} {{ r.currency }}</td>
+      <td><b>{{ '%.2f'|format(r.commission or 0) }} {{ r.currency }}</b></td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="muted">אין הזמנות בתקופה הזו (או שעוד לא בוצע סנכרון). אם הסנכרון נכשל, השגיאה תופיע בלוח הבקרה. ייתכן שצריך הרשאה ל-order.list באפליקציה של אליאקספרס.</p>{% endif %}
+</section>
+
+{% if orders %}
+<section class="card">
+  <h2>הזמנות אחרונות</h2>
+  <div class="table-wrap"><table>
+    <tr><th>תאריך</th><th>Tracking</th><th>מוצר</th><th>סטטוס</th><th>סכום</th><th>עמלה</th></tr>
+    {% for o in orders %}
+    <tr><td>{{ o.created_time }}</td><td class="mono" dir="ltr">{{ o.tracking_id }}</td>
+      <td>{% if o.product_id %}<a href="https://www.aliexpress.com/item/{{ o.product_id }}.html" target="_blank" rel="noopener noreferrer">{{ o.product_id }}</a>{% endif %}</td>
+      <td>{{ o.status }}</td><td>{{ o.paid_amount }} {{ o.currency }}</td><td>{{ o.commission }} {{ o.currency }}</td></tr>
+    {% endfor %}
+  </table></div>
+</section>
+{% endif %}
+{% endblock %}

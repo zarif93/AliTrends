@@ -1,21 +1,21 @@
-"""Telegram and Facebook publishing. Each publish returns the platform's message/post id or raises."""
+"""Telegram: channel posts (photo + caption + link button) and admin messages."""
 from __future__ import annotations
 
 import logging
 import time
+from typing import Iterable
 
 import requests
 import telebot
 from telebot.apihelper import ApiTelegramException
 from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from ..aliexpress import Product
+from ..config import Market, Target
+from ..render import button_text
+from .base import Platform, PublishError, TokenInfo
+
 log = logging.getLogger(__name__)
-
-GRAPH_URL = "https://graph.facebook.com/v22.0"
-
-
-class PublishError(RuntimeError):
-    pass
 
 
 def _retry_after(exc: ApiTelegramException) -> int:
@@ -42,6 +42,8 @@ def download_jpeg(image_url: str, session: requests.Session | None = None) -> by
 
 
 class TelegramPublisher:
+    """Low-level Bot API client: channel photo posts with retries, and messages to the admin chat."""
+
     def __init__(self, token: str, admin_chat_id: str, bot: telebot.TeleBot | None = None,
                  fetch_image=download_jpeg, sleep=time.sleep):
         self._bot = bot or telebot.TeleBot(token, threaded=False)
@@ -88,45 +90,51 @@ class TelegramPublisher:
         except Exception as exc:
             log.error("Admin notification failed: %s", exc)
 
-
-class FacebookPublisher:
-    def __init__(self, user_token: str, session: requests.Session | None = None):
-        self._user_token = user_token
-        self._session = session or requests.Session()
-        self._page_tokens: dict[str, str] = {}
-
-    def refresh_tokens(self) -> None:
-        """Page tokens come from the user token; refreshed each cycle so expiry shows up quickly."""
-        data = self._get(f"{GRAPH_URL}/me/accounts",
-                         {"fields": "access_token,name,id", "limit": 100, "access_token": self._user_token})
-        self._page_tokens = {page["id"]: page["access_token"] for page in data.get("data", [])}
-        log.info("Facebook: %d page tokens loaded", len(self._page_tokens))
-
-    def publish(self, page_id: str, image_url: str, message: str) -> str:
-        token = self._page_tokens.get(page_id)
-        if not token:
-            raise PublishError(f"Facebook {page_id}: no page token (is the page connected to FACE_TOKEN?)")
+    def send_admin_strict(self, text: str) -> None:
+        """For login codes: the caller must know if the message did not go out."""
         try:
-            response = self._session.post(
-                f"{GRAPH_URL}/{page_id}/photos",
-                data={"message": message, "url": image_url, "access_token": token},
-                timeout=60,
-            )
-            data = response.json()
-        except (requests.RequestException, ValueError) as exc:
-            raise PublishError(f"Facebook {page_id}: {exc}") from exc
-        if "error" in data:
-            raise PublishError(f"Facebook {page_id}: {data['error'].get('message')}")
-        post_id = data.get("post_id") or data.get("id")
-        if not post_id:
-            raise PublishError(f"Facebook {page_id}: unexpected response {data}")
-        return str(post_id)
+            self._bot.send_message(self._admin, text)
+        except Exception as exc:
+            raise PublishError(f"Telegram admin: {exc}") from exc
 
-    def _get(self, url: str, params: dict) -> dict:
+    def send_admin_document(self, data: bytes, filename: str, caption: str = "") -> None:
         try:
-            data = self._session.get(url, params=params, timeout=30).json()
-        except (requests.RequestException, ValueError) as exc:
-            raise PublishError(f"Facebook API: {exc}") from exc
-        if "error" in data:
-            raise PublishError(f"Facebook API: {data['error'].get('message')}")
-        return data
+            self._bot.send_document(self._admin, (filename, data), caption=caption[:1000],
+                                    disable_notification=True)
+        except Exception as exc:
+            raise PublishError(f"Telegram backup: {exc}") from exc
+
+    def member_count(self, chat_id: str) -> int:
+        return int(self._bot.get_chat_member_count(chat_id))
+
+    def me(self) -> str:
+        return self._bot.get_me().username
+
+
+class TelegramPlatform(Platform):
+    name = "telegram"
+    label = "טלגרם"
+    target_hint = "מזהה צ'אט, למשל -1001234567890 או @channelname (הבוט חייב להיות מנהל בערוץ)"
+
+    def __init__(self, client: TelegramPublisher):
+        self.client = client
+
+    def publish(self, target: Target, product: Product, text: str, market: Market) -> str:
+        return self.client.publish(target.target_id, product.image_url, text, product.promotion_link,
+                                   button_text(market))
+
+    def followers(self, target: Target) -> int | None:
+        return self.client.member_count(target.target_id)
+
+    def token_info(self, targets: Iterable[Target]) -> list[TokenInfo]:
+        try:
+            return [TokenInfo("טלגרם (BOT_TOKEN)", True, message=f"@{self.client.me()}")]
+        except Exception as exc:
+            return [TokenInfo("טלגרם (BOT_TOKEN)", False, message=str(exc))]
+
+    def resolve_target(self, target_id: str, secret: str | None) -> tuple[str, str]:
+        try:
+            chat = self.client._bot.get_chat(target_id)
+        except Exception as exc:
+            raise PublishError(f"טלגרם לא מכיר את {target_id}: {exc}") from exc
+        return str(chat.id), chat.title or chat.username or ""

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "macros.html" import csrf %}
+{% block title %}הגדרות{% endblock %}
+{% block content %}
+<h1>הגדרות</h1>
+<p class="muted">שינויים נכנסים לתוקף מהסבב הבא. כל שינוי נרשם ביומן השינויים ואפשר לשחזר אותו.</p>
+<form method="post">
+  {{ csrf() }}
+  {% set titles = {'general': '⏱ תזמון', 'filters': '🔎 סינון מוצרים', 'alerts': '🔔 התראות וגיבוי'} %}
+  <div class="grid cols-3">
+  {% for group, specs in groups.items() %}
+    <section class="card">
+      <h2>{{ titles.get(group, group) }}</h2>
+      {% for spec in specs %}
+        {% if spec.kind.__name__ == 'bool' %}
+          <label class="check"><input type="checkbox" name="{{ spec.key }}" value="1" {{ 'checked' if value(spec.key) }}> {{ spec.label }}</label>
+          {% if spec.help %}<span class="hint">{{ spec.help }}</span>{% endif %}
+        {% else %}
+          <label>{{ spec.label }}
+            <input name="{{ spec.key }}" value="{{ value(spec.key) }}"
+                   {% if spec.kind.__name__ in ('int', 'float') %}type="number" step="{{ '0.1' if spec.kind.__name__ == 'float' else '1' }}"{% endif %}
+                   {% if spec.minimum is not none %}min="{{ spec.minimum }}"{% endif %} {% if spec.maximum is not none %}max="{{ spec.maximum }}"{% endif %}
+                   {% if spec.kind.__name__ == 'str' %}dir="ltr"{% endif %} required>
+            {% if spec.help %}<span class="hint">{{ spec.help }}</span>{% endif %}
+          </label>
+        {% endif %}
+      {% endfor %}
+    </section>
+  {% endfor %}
+  </div>
+
+  <section class="card">
+    <h2>🌍 לפי שפה</h2>
+    <p class="muted small">הנחה מינימלית: מוצרים עם הנחה קטנה יותר לא יפורסמו (באירופה המחירים בדרך כלל בלי מחיר מחוק, לכן 0).
+      הנחיות ל-AI: טקסט חופשי שמתווסף להוראות הכתיבה, למשל "טון הומוריסטי" או "תמיד להזכיר משלוח חינם אם יש".</p>
+    <div class="lang-grid">
+      {% for lang in markets %}
+        <div class="lang-row">
+          <h3>{{ LANGUAGE_LABELS[lang] }}</h3>
+          <label>הנחה מינימלית (%)<input type="number" min="0" max="90" name="min_discount.{{ lang }}" value="{{ tuning.min_discount[lang] }}"></label>
+          <label>הנחיות ל-AI<textarea name="prompt.{{ lang }}" rows="3" maxlength="1500" placeholder="(ללא)">{{ tuning.prompt_extra.get(lang, '') }}</textarea></label>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  <div class="sticky-save"><button class="primary">שמירת הגדרות</button></div>
+</form>
+{% endblock %}

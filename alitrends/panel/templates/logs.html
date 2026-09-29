@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}לוגים{% endblock %}
+{% block content %}
+<h1>לוגים</h1>
+<form method="get" class="row wrap card">
+  <label>קובץ<select name="file">{% for f in files %}<option {{ 'selected' if f == current }}>{{ f }}</option>{% endfor %}</select></label>
+  <label>רמה<select name="level">
+    <option value="">הכל</option>
+    <option value="warning" {{ 'selected' if level == 'warning' }}>אזהרות ושגיאות</option>
+    <option value="error" {{ 'selected' if level == 'error' }}>רק שגיאות</option>
+  </select></label>
+  <label class="grow">חיפוש<input name="q" value="{{ q }}" dir="ltr"></label>
+  <button>הצג</button>
+</form>
+<p class="small muted">{{ lines|length }} שורות אחרונות, החדשות למעלה.</p>
+<pre class="log" dir="ltr">{% for line in lines %}<span class="{{ 'l-error' if ' ERROR ' in line or ' CRITICAL ' in line else ('l-warn' if ' WARNING ' in line) }}">{{ line }}</span>
+{% else %}(ריק){% endfor %}</pre>
+{% endblock %}

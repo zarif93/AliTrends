@@ -1,0 +1,14 @@
+{% macro post_button(action, label, cls='', confirm=None, fields={}) -%}
+<form method="post" action="{{ action }}" class="inline"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ request.full_path }}">
+  {% for k, v in fields.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <button class="{{ cls }}">{{ label }}</button>
+</form>
+{%- endmacro %}
+
+{% macro csrf() -%}<input type="hidden" name="_csrf" value="{{ csrf_token() }}">{%- endmacro %}
+
+{% macro badge_platform(name, enabled=True) -%}
+<span class="badge p-{{ name }}{{ '' if enabled else ' off' }}">{{ platform_label(name) }}</span>
+{%- endmacro %}

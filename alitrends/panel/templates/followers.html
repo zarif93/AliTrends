@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "macros.html" import post_button, badge_platform %}
+{% block title %}מנויים{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>מנויים ועוקבים</h1>
+  {{ post_button(url_for('refresh_status'), 'עדכן עכשיו') }}
+</div>
+<p class="muted">נאסף פעם ביום, בשעת הדוח היומי. ב-Threads צריך הרשאת threads_manage_insights.</p>
+{% if rows %}
+<section class="card">
+  <div class="chart tall"><canvas data-chart="line" data-source="chart-followers"></canvas></div>
+  <script type="application/json" id="chart-followers">{{ chart|tojson }}</script>
+</section>
+<section class="card">
+  <div class="table-wrap"><table>
+    <tr><th>רשת</th><th>יעד</th><th>ערוצים</th><th>עכשיו</th><th>שבוע</th><th>חודש</th></tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ badge_platform(r.platform) }}</td>
+      <td><bdi dir="ltr">{{ r.label or r.target_id }}</bdi></td>
+      <td class="small">{% for k in r.channels %}{{ k|channel_label }}{{ '، ' if not loop.last }}{% endfor %}</td>
+      <td><b>{{ '{:,}'.format(r.latest) }}</b></td>
+      {% for d in (r.d7, r.d30) %}
+        <td class="{{ 'up' if d and d > 0 else ('down' if d and d < 0) }}">{{ ('+' if d > 0 else '') ~ d if d is not none else '—' }}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table></div>
+</section>
+{% else %}
+<div class="card"><p class="muted">אין עדיין נתונים. לחצו "עדכן עכשיו".</p></div>
+{% endif %}
+{% endblock %}

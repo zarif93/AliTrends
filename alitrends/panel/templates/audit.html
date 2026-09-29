@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "macros.html" import post_button %}
+{% block title %}יומן שינויים{% endblock %}
+{% block content %}
+<h1>יומן שינויים</h1>
+<p class="muted">כל שינוי בערוצים, ביעדים, בהגדרות וברשימה השחורה. "שחזר" מחזיר את הפריט למצב שהיה לפני השינוי.</p>
+<section class="card">
+  {% if entries %}
+  <div class="table-wrap"><table>
+    <tr><th>מתי</th><th>שינוי</th><th>פרטים</th><th></th></tr>
+    {% for e in entries %}
+    <tr>
+      <td class="nowrap">{{ e.at|il }}</td>
+      <td>{{ e.summary }}</td>
+      <td class="small">
+        {% for key, old, new in e.changes[:8] %}
+          <div><span class="mono">{{ key }}</span>: <span class="old">{{ old if old is not none else '∅' }}</span> → <span class="new">{{ new if new is not none else '∅' }}</span></div>
+        {% endfor %}
+      </td>
+      <td>{{ post_button(url_for('audit_restore', audit_id=e.id), 'שחזר', 'small', confirm='להחזיר את הפריט למצב שלפני השינוי הזה?') }}</td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="muted">אין עדיין שינויים.</p>{% endif %}
+</section>
+{% endblock %}

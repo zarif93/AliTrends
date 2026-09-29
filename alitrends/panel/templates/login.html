@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}כניסה{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<div class="card login">
+  <h1>🛒 AliTrends</h1>
+  {% if not_configured %}
+    <p>עוד לא הוגדרה סיסמה. בשרת, בתיקיית הפרויקט, הריצו:</p>
+    <pre class="code">.venv/bin/python -m alitrends.panel set-password</pre>
+  {% else %}
+    <form method="post" autocomplete="on">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>שם משתמש<input name="username" autocomplete="username" required autofocus></label>
+      <label>סיסמה<input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary wide">המשך</button>
+    </form>
+    <p class="muted small">אחרי הסיסמה יישלח קוד חד-פעמי לטלגרם.</p>
+  {% endif %}
+</div>
+{% endblock %}

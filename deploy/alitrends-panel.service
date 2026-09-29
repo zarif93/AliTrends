@@ -1,0 +1,14 @@
+[Unit]
+Description=AliTrends admin panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/root/ali/AliTrends
+# Listens on localhost only; reach it through `tailscale serve --bg 8080`.
+ExecStart=/root/ali/AliTrends/.venv/bin/python -m alitrends.panel serve --host 127.0.0.1 --port 8080
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

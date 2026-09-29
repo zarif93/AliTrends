@@ -3,7 +3,8 @@ from types import SimpleNamespace
 import pytest
 from telebot.apihelper import ApiTelegramException
 
-from alitrends.publishers import PublishError, TelegramPublisher, jpeg_url
+from alitrends.platforms.base import PublishError
+from alitrends.platforms.telegram import TelegramPublisher, jpeg_url
 
 
 def tg_error(code, description, retry_after=None):

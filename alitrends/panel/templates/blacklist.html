@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "macros.html" import post_button, csrf %}
+{% block title %}רשימה שחורה{% endblock %}
+{% block content %}
+<h1>רשימה שחורה</h1>
+<p class="muted">מוצרים ומילים שלא יפורסמו אף פעם. מילה נבדקת מול כותרת המוצר (בשפת הערוץ), בלי תלות באותיות גדולות או קטנות.</p>
+<section class="card">
+  <h2>הוספה</h2>
+  <form method="post" class="row wrap">
+    {{ csrf() }}
+    <label>סוג
+      <select name="kind"><option value="keyword">מילה / מותג</option><option value="product">מוצר (קישור או מזהה)</option></select>
+    </label>
+    <label class="grow">ערך<input name="value" required></label>
+    <label class="grow">הערה<input name="note"></label>
+    <button class="primary">הוספה</button>
+  </form>
+</section>
+<section class="card">
+  {% if items %}
+  <div class="table-wrap"><table>
+    <tr><th>סוג</th><th>ערך</th><th>הערה</th><th>נוסף</th><th></th></tr>
+    {% for i in items %}
+    <tr>
+      <td>{{ 'מוצר' if i.kind == 'product' else 'מילה' }}</td>
+      <td>{% if i.kind == 'product' %}<a href="https://www.aliexpress.com/item/{{ i.value }}.html" target="_blank" rel="noopener noreferrer">{{ i.value }}</a>{% else %}<b>{{ i.value }}</b>{% endif %}</td>
+      <td>{{ i.note }}</td><td>{{ i.created_at|il('%d/%m/%Y') }}</td>
+      <td>{{ post_button(url_for('blacklist_delete', item_id=i.id), 'הסר', 'small') }}</td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="muted">הרשימה ריקה.</p>{% endif %}
+</section>
+{% endblock %}

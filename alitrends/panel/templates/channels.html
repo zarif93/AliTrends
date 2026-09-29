@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "macros.html" import post_button, badge_platform %}
+{% block title %}ערוצים{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>ערוצים</h1>
+  <a class="button primary" href="{{ url_for('channel_new') }}">+ ערוץ חדש</a>
+</div>
+<p class="muted">ערוץ = שפה + קטגוריה. לכל ערוץ יש יעדים (ערוץ טלגרם, עמוד פייסבוק, אינסטגרם, Threads) שמקבלים את אותו מוצר בכל סבב.</p>
+
+{% if not by_language %}
+  <div class="card"><p>אין ערוצים עדיין. <a href="{{ url_for('channel_new') }}">צרו את הראשון</a>.</p></div>
+{% endif %}
+
+{% for language, channels in by_language.items() %}
+<section class="card">
+  <h2>{{ LANGUAGE_LABELS.get(language, language) }}</h2>
+  <div class="table-wrap"><table class="channels">
+    <tr><th>קטגוריה</th><th>יעדים</th><th class="hide-sm">תדירות</th><th class="hide-sm">שעות</th><th class="hide-sm">7 ימים</th><th></th></tr>
+    {% for c in channels %}
+    <tr class="{{ '' if c.enabled else 'disabled' }}">
+      <td><a href="{{ url_for('channel_edit', channel_id=c.id) }}"><b>{{ CATEGORY_LABELS.get(c.category, c.category) }}</b></a>
+        {% if c.tracking_id %}<br><span class="small muted">tracking: {{ c.tracking_id }}</span>{% endif %}</td>
+      <td>{% for t in c.targets %}{{ badge_platform(t.platform, t.enabled) }} {% else %}<span class="error-text small">אין יעדים</span>{% endfor %}</td>
+      <td class="hide-sm">{{ 'כל סבב' if c.every_n_cycles == 1 else 'כל ' ~ c.every_n_cycles ~ ' סבבים' }}</td>
+      <td class="hide-sm">{{ (c.active_from ~ '–' ~ c.active_to) if c.active_from else 'כל היום' }}</td>
+      <td class="hide-sm">{{ week.get(c.key, {}).values()|sum }}</td>
+      <td class="actions">
+        {{ post_button(url_for('channel_toggle', channel_id=c.id), 'כבה' if c.enabled else 'הפעל', 'small ' ~ ('' if c.enabled else 'primary')) }}
+        <a class="button small" href="{{ url_for('channel_edit', channel_id=c.id) }}">עריכה</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </table></div>
+</section>
+{% endfor %}
+{% endblock %}

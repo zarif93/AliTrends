@@ -45,6 +45,11 @@ class Copywriter:
         self._client = OpenAI(api_key=api_key, max_retries=3, timeout=60)
         self._model = model
         self._storage = storage
+        self._extra: dict[str, str] = {}
+
+    def configure(self, model: str, prompt_extra: dict[str, str]) -> None:
+        self._model = model
+        self._extra = dict(prompt_extra)
 
     def copy_for(self, product: Product, market: Market) -> dict:
         """Cached per product+language, so each post is written once and reused across channels."""
@@ -63,14 +68,20 @@ class Copywriter:
                 temperature=0.8,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": USER_PROMPT.format(
-                        language=market.language, title=product.title, category=product.category)},
+                    {"role": "user", "content": self._prompt(product, market)},
                 ],
             )
             data = json.loads(response.choices[0].message.content or "{}")
         except (OpenAIError, json.JSONDecodeError) as exc:
             raise CopyError(f"Copy generation failed for {product.product_id}: {exc}") from exc
         return _validate(data)
+
+    def _prompt(self, product: Product, market: Market) -> str:
+        prompt = USER_PROMPT.format(language=market.language, title=product.title, category=product.category)
+        extra = self._extra.get(market.language)
+        if extra:
+            prompt += f"\n\nAdditional instructions from the channel owner (follow them):\n{extra}"
+        return prompt
 
 
 def _validate(data: dict) -> dict:

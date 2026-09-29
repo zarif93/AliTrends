@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}ערוץ חדש{% endblock %}
+{% block content %}
+<h1>ערוץ חדש</h1>
+<div class="card narrow-card">
+  <form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>שפה (קובעת מדינת משלוח, מטבע ושפת הפוסט)
+      <select name="language" required>
+        {% for lang, m in markets.items() %}<option value="{{ lang }}">{{ LANGUAGE_LABELS[lang] }} · {{ m.country }} · {{ m.currency }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>קטגוריה
+      <select name="category" required>
+        {% for cat in categories %}<option value="{{ cat }}">{{ CATEGORY_LABELS.get(cat, cat) }}</option>{% endfor %}
+      </select>
+    </label>
+    {% if existing %}<p class="small muted">כבר קיימים: {% for lang, cat in existing|sort %}{{ LANGUAGE_LABELS[lang] }}/{{ CATEGORY_LABELS.get(cat, cat) }}{{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
+    <button class="primary">יצירה</button>
+  </form>
+</div>
+{% endblock %}

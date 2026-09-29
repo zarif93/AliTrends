@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "macros.html" import post_button, csrf %}
+{% block title %}פרסום ידני{% endblock %}
+{% block content %}
+<h1>פרסום ידני</h1>
+<p class="muted">מדביקים קישור למוצר באליאקספרס, בוחרים ערוצים, והבוט כותב פוסט בכל שפה ומפרסם לכל היעדים הפעילים של כל ערוץ.
+  מחיר וקישור נלקחים לפי המדינה של כל ערוץ. {% if shabbat %}<b>עכשיו שבת: הפרסום יתבצע במוצאי שבת.</b>{% endif %}</p>
+
+<section class="card">
+  <form method="post">
+    {{ csrf() }}
+    <label>קישור למוצר<input name="url" dir="ltr" required placeholder="https://www.aliexpress.com/item/1005....html"></label>
+    <fieldset>
+      <legend>ערוצים</legend>
+      <div class="checks">
+        {% for c in channels if c.targets %}
+          <label class="check"><input type="checkbox" name="channel_ids" value="{{ c.id }}"> {{ c.key|channel_label }}{% if not c.enabled %} <span class="muted">(כבוי)</span>{% endif %}</label>
+        {% else %}<p class="muted">אין ערוצים עם יעדים.</p>{% endfor %}
+      </div>
+    </fieldset>
+    <label>מתי (שעון ישראל). ריק = עכשיו<input type="datetime-local" name="when"></label>
+    <button class="primary">פרסום</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>היסטוריה ותזמונים</h2>
+  {% if jobs %}
+  <div class="table-wrap"><table>
+    <tr><th>מתי</th><th>מוצר</th><th>ערוצים</th><th>מצב</th><th>תוצאה</th><th></th></tr>
+    {% for j in jobs %}
+    <tr>
+      <td>{{ j.run_at|il }}</td>
+      <td><a href="https://www.aliexpress.com/item/{{ j.payload.product_id }}.html" target="_blank" rel="noopener noreferrer">{{ j.payload.product_id }}</a></td>
+      <td class="small">{% for cid in j.payload.channel_ids %}{{ (keys.get(cid) or ('#' ~ cid))|channel_label }}{{ '، ' if not loop.last }}{% endfor %}</td>
+      <td>{{ JOB_STATUS_LABELS[j.status] }}</td>
+      <td class="small">
+        {% if j.result and j.result.error %}<span class="error-text">{{ j.result.error|truncate(200) }}</span>
+        {% elif j.result and j.result.channels %}
+          {% for key, r in j.result.channels.items() %}{{ key|channel_label }}: {% if r.error %}<span class="error-text">{{ r.error|truncate(80) }}</span>{% else %}✅ {{ r.published }}{% endif %}<br>{% endfor %}
+        {% endif %}
+      </td>
+      <td>{% if j.status == 'pending' %}{{ post_button(url_for('job_cancel', job_id=j.id), 'ביטול', 'small') }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="muted">עוד לא היו פרסומים ידניים.</p>{% endif %}
+</section>
+{% endblock %}

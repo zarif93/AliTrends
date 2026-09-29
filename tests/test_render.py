@@ -48,3 +48,20 @@ def test_packed_hashtags_are_split():
     from alitrends.copywriter import _validate
     out = _validate({"headline": "h", "body": "b", "hashtags": ["#fitness#musculation #WOD", "Maison Propre"]})
     assert out["hashtags"] == ["#fitness", "#musculation", "#WOD", "#Maison_Propre"]
+
+
+def test_threads_fits_500_chars_and_keeps_link():
+    long_copy = {**COPY, "body": "מילה " * 200}
+    text = render(PRODUCT, long_copy, MARKETS["Hebrew"], "threads")
+    assert len(text) <= 500
+    assert text.endswith(PRODUCT.promotion_link) and "₪24.90" in text
+    assert "#" not in text  # hashtags go first when space runs out
+
+
+def test_threads_keeps_one_hashtag_when_short():
+    text = render(PRODUCT, COPY, MARKETS["Hebrew"], "threads")
+    assert "#אוזניות" in text and "#דילים" not in text
+
+
+def test_instagram_includes_link_text():
+    assert PRODUCT.promotion_link in render(PRODUCT, COPY, MARKETS["English"], "instagram")

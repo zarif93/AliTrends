@@ -4,7 +4,9 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import re
 import time
+from datetime import datetime
 from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable
@@ -144,16 +146,43 @@ class AliExpressClient:
             raise AliExpressError(f"{method}: {result.get('resp_code')} - {result.get('resp_msg')}")
         return result.get("result") or {}
 
-    def short_link(self, url: str) -> str:
-        """Convert a long promotion link into a short s.click one; falls back to the original link."""
+    def short_link(self, url: str, tracking_id: str | None = None) -> str:
+        """Convert a link into a short s.click one under `tracking_id`; falls back to the original link."""
         try:
             result = self.call("aliexpress.affiliate.link.generate", promotion_link_type=0,
-                               source_values=url, tracking_id=self.tracking_id)
+                               source_values=url, tracking_id=tracking_id or self.tracking_id)
             links = (result.get("promotion_links") or {}).get("promotion_link") or []
             return (links[0].get("promotion_link") if links else None) or url
         except AliExpressError as exc:
             log.warning("Short link failed, using the long one: %s", exc)
             return url
+
+    def product_detail(self, product_id: str, *, language: str = "EN", currency: str = "USD",
+                       country: str = "US", tracking_id: str | None = None) -> Product | None:
+        """One product by id, priced for a market (aliexpress.affiliate.productdetail.get)."""
+        result = self.call("aliexpress.affiliate.productdetail.get", product_ids=product_id,
+                           target_language=language, target_currency=currency, country=country,
+                           tracking_id=tracking_id or self.tracking_id)
+        raw = (result.get("products") or {}).get("product") or []
+        return Product.from_api(raw[0]) if raw else None
+
+    def orders(self, start: datetime, end: datetime, status: str, page_size: int = 50,
+               max_pages: int = 20) -> list[dict[str, Any]]:
+        """Affiliate orders in a time range (aliexpress.affiliate.order.list), all pages."""
+        orders: list[dict[str, Any]] = []
+        for page in range(1, max_pages + 1):
+            result = self.call(
+                "aliexpress.affiliate.order.list",
+                start_time=start.strftime("%Y-%m-%d %H:%M:%S"),
+                end_time=end.strftime("%Y-%m-%d %H:%M:%S"),
+                status=status, page_no=page, page_size=page_size,
+            )
+            batch = (result.get("orders") or {}).get("order") or []
+            orders.extend(batch)
+            total_pages = int(result.get("total_page_no") or 1)
+            if not batch or page >= total_pages:
+                break
+        return orders
 
     def search_products(self, **kwargs: Any) -> list[Product]:
         """Regular catalogue search (aliexpress.affiliate.product.query)."""
@@ -181,3 +210,60 @@ class AliExpressClient:
         raw_products = (result.get("products") or {}).get("product") or []
         products = [p for p in map(Product.from_api, raw_products) if p]
         return [replace(p, hot=True) for p in products] if hot else products
+
+
+_ITEM_ID = re.compile(r"/item/(?:[^/]*?/)?(\d{6,})\.html|[?&](?:productIds?|itemId)=(\d{6,})")
+
+
+def item_url(product_id: str) -> str:
+    return f"https://www.aliexpress.com/item/{product_id}.html"
+
+
+def product_id_from_url(url: str, session: requests.Session | None = None) -> str | None:
+    """Product id from an AliExpress link; short links (s.click, a.aliexpress) are followed first."""
+    url = url.strip()
+    if url.isdigit():
+        return url
+    match = _ITEM_ID.search(url)
+    if not match:
+        try:
+            response = (session or requests).get(url, allow_redirects=True, timeout=20,
+                                                 headers={"User-Agent": "Mozilla/5.0"})
+            candidates = [r.headers.get("location", "") for r in response.history] + [response.url, response.text[:20000]]
+        except requests.RequestException:
+            return None
+        for candidate in candidates:
+            match = _ITEM_ID.search(candidate or "")
+            if match:
+                break
+    return next((g for g in match.groups() if g), None) if match else None
+
+
+def parse_order(raw: dict[str, Any]) -> dict[str, Any] | None:
+    """Normalise one order.list entry; field names differ between API versions, so try several."""
+    order_id = str(raw.get("order_id") or raw.get("parent_order_id") or "")
+    if not order_id:
+        return None
+
+    def number(*keys: str) -> float | None:
+        for key in keys:
+            value = raw.get(key)
+            if value not in (None, ""):
+                try:
+                    return float(str(value).replace(",", ""))
+                except ValueError:
+                    continue
+        return None
+
+    return {
+        "order_key": str(raw.get("sub_order_id") or order_id),
+        "order_id": order_id,
+        "tracking_id": str(raw.get("tracking_id") or "default"),
+        "product_id": str(raw.get("product_id") or "") or None,
+        "status": raw.get("order_status") or raw.get("status"),
+        "currency": raw.get("settled_currency") or raw.get("commission_currency") or "USD",
+        "paid_amount": number("paid_amount", "settled_amount", "finished_amount", "estimated_paid_amount"),
+        "commission": number("estimated_paid_commission", "estimated_finished_commission", "paid_commission",
+                             "commission", "estimated_commission"),
+        "created_time": raw.get("created_time") or raw.get("paid_time") or "",
+    }

@@ -1,12 +1,30 @@
 """Turns a product + AI copy into the final post text for each platform, with live, exact price data."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from decimal import Decimal
 
 from .aliexpress import Product
 from .config import Market
 
 TELEGRAM_CAPTION_LIMIT = 1024
+
+
+@dataclass(frozen=True)
+class PostStyle:
+    link_in_button: bool  # Telegram shows the link as a button under the photo
+    limit: int            # max characters
+    max_hashtags: int
+
+
+STYLES: dict[str, PostStyle] = {
+    "telegram": PostStyle(link_in_button=True, limit=TELEGRAM_CAPTION_LIMIT, max_hashtags=6),
+    "facebook": PostStyle(link_in_button=False, limit=60_000, max_hashtags=6),
+    # Instagram captions don't make links clickable, but the short link can still be copied.
+    "instagram": PostStyle(link_in_button=False, limit=2_200, max_hashtags=8),
+    # Threads allows 500 characters and a single topic tag per post.
+    "threads": PostStyle(link_in_button=False, limit=500, max_hashtags=1),
+}
 
 CURRENCY_SYMBOLS = {"USD": "$", "ILS": "₪", "EUR": "€", "BRL": "R$", "GBP": "£"}
 
@@ -54,27 +72,30 @@ def deal_lines(product: Product, market: Market) -> list[str]:
 
 
 def render(product: Product, copy: dict, market: Market, platform: str) -> str:
-    """platform: "telegram" (link lives in a button, 1024-char limit) or "facebook" (link inline)."""
+    """Final post text for a platform: the link goes in a button or inline, within the platform's limits."""
+    style = STYLES[platform]
     head = [copy["headline"], "", copy["body"], "", *deal_lines(product, market)]
-    tail: list[str] = []
-    if platform == "facebook":
-        tail += ["", f"{LABELS[market.language]['link']} {product.promotion_link}"]
-    if copy.get("hashtags"):
-        tail += ["", " ".join(copy["hashtags"])]
+    link = [] if style.link_in_button else ["", f"{LABELS[market.language]['link']} {product.promotion_link}"]
+    tags = (copy.get("hashtags") or [])[: style.max_hashtags]
+    tail = ["", " ".join(tags)] if tags else []
 
-    text = "\n".join(head + tail)
-    if platform == "telegram" and len(text) > TELEGRAM_CAPTION_LIMIT:
-        text = _fit(head, tail, TELEGRAM_CAPTION_LIMIT)
+    text = "\n".join(head + link + tail)
+    if len(text) > style.limit:
+        text = _fit(head, link, style.limit)
     return text
 
 
-def _fit(head: list[str], tail: list[str], limit: int) -> str:
-    """Drop hashtags first, then shorten the body; the price lines are never cut."""
-    text = "\n".join(head)
+def _fit(head: list[str], link: list[str], limit: int) -> str:
+    """Drop hashtags first, then shorten the body; the price lines and the link are never cut."""
+    text = "\n".join(head + link)
     if len(text) <= limit:
         return text
     body_index = 2
-    overflow = len(text) - limit + 1
+    overflow = len(text) - limit + 1  # room for the ellipsis
     head = head.copy()
     head[body_index] = head[body_index][: max(0, len(head[body_index]) - overflow)].rstrip() + "…"
-    return "\n".join(head)[:limit]
+    text = "\n".join(head + link)
+    if len(text) > limit:  # headline and prices alone are too long: hard cut, but keep the link
+        suffix = "\n" + "\n".join(link) if link else ""
+        text = "\n".join(head)[: max(0, limit - len(suffix))] + suffix
+    return text

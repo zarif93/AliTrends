@@ -115,3 +115,31 @@ def test_main_pool_keeps_hot_priority(storage):
     source = ProductSource(client, storage, pool_ttl=3600, cooldown_days=7)
     pool = source.pool(MARKET, "main")
     assert [p.product_id for p in pool] == ["h1", "r1"]
+
+
+def test_blacklist_filters_ids_and_title_words(storage):
+    client = FakeClient([make("1"), replace(make("2"), title="Xiaomi band"), make("3")])
+    source = ProductSource(client, storage, pool_ttl=3600, cooldown_days=7)
+    storage.add_blacklist("product", "1")
+    storage.add_blacklist("keyword", "XIAOMI")
+    assert {source.pick(MARKET, CATEGORY, CHANNEL).product_id for _ in range(20)} == {"3"}
+
+
+def test_channel_tracking_id_builds_link_from_item_page(storage):
+    class TrackingClient(FakeClient):
+        def short_link(self, url, tracking_id=None):
+            return f"{url}|{tracking_id}"
+
+    source = ProductSource(TrackingClient([make("9")]), storage, pool_ttl=3600, cooldown_days=7)
+    product = source.pick(MARKET, CATEGORY, CHANNEL, tracking_id="he_main")
+    assert product.promotion_link == "https://www.aliexpress.com/item/9.html|he_main"
+
+
+def test_configure_applies_thresholds_and_drops_pools(storage):
+    from alitrends.config import Tuning
+    client = FakeClient([make("1", sales=150), make("2", sales=5000)])
+    source = ProductSource(client, storage, pool_ttl=3600, cooldown_days=7)
+    assert len(source.pool(MARKET, CATEGORY)) == 2
+    source.configure(Tuning(min_sales=1000, hot_products_enabled=False))
+    assert [p.product_id for p in source.pool(MARKET, CATEGORY)] == ["2"]
+    assert client.calls["hot"] == 1  # the second refresh skipped hot products

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "macros.html" import post_button, badge_platform %}
+{% block title %}לוח בקרה{% endblock %}
+{% block content %}
+<h1>לוח בקרה</h1>
+
+<section class="grid cols-3">
+  <div class="card status {{ 'good' if alive and not tuning.paused else ('warn' if tuning.paused else 'bad') }}">
+    <div class="card-head">
+      <h2>מצב הבוט</h2>
+      {% if tuning.paused %}
+        {{ post_button(url_for('pause'), '▶ המשך', 'primary', fields={'paused': '0'}) }}
+      {% else %}
+        {{ post_button(url_for('pause'), '⏸ השהה', 'danger', confirm='להשהות את כל הפרסומים?', fields={'paused': '1'}) }}
+      {% endif %}
+    </div>
+    <p class="big">
+      {% if not heartbeat %}⚪ עוד לא דיווח
+      {% elif not alive %}🔴 לא מגיב
+      {% elif tuning.paused %}⏸ מושהה
+      {% else %}🟢 {{ state_labels.get(state.state, state.state) }}{% endif %}
+    </p>
+    <dl>
+      <dt>דופק אחרון</dt><dd>{{ heartbeat|ago }}</dd>
+      {% if state.next_cycle_at and not tuning.paused %}<dt>הסבב הבא</dt><dd>{{ state.next_cycle_at|il }} ({{ state.next_cycle_at|ago }})</dd>{% endif %}
+      {% if last_cycle %}<dt>סבב אחרון</dt><dd>{{ last_cycle.finished_at|il }}: {{ last_cycle.published }} פורסמו, {{ last_cycle.errors }} שגיאות{% if last_cycle.off_hours %}, {{ last_cycle.off_hours }} מחוץ לשעות{% endif %}</dd>{% endif %}
+      {% if shabbat and tuning.shabbat_enabled %}<dt>שבת</dt><dd>🕯️ הפרסום עצור עד מוצ"ש</dd>{% endif %}
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>24 שעות אחרונות</h2>
+    <p class="big">{{ total }} <span class="muted small">פוסטים</span></p>
+    <p>{% for p in PLATFORMS if by_platform.get(p) %}{{ badge_platform(p) }} {{ by_platform[p] }}&nbsp; {% endfor %}</p>
+    {% if by_language %}<p class="small muted">{% for lang, n in by_language.items() %}{{ LANGUAGE_LABELS.get(lang, lang) }} {{ n }}{{ ' · ' if not loop.last }}{% endfor %}</p>{% endif %}
+    <p class="{{ 'error-text' if errors_24h else 'muted' }}">שגיאות: {{ errors_24h }}</p>
+  </div>
+
+  <div class="card">
+    <h2>ערוצים</h2>
+    <p class="big">{{ live_channels }} <span class="muted small">פעילים מתוך {{ channel_count }}</span></p>
+    <p><a class="button" href="{{ url_for('channels') }}">ניהול ערוצים</a> <a class="button" href="{{ url_for('manual') }}">פרסום ידני</a></p>
+    {% if pending_jobs %}
+      <p class="small muted">בתור לבוט: {% for j in pending_jobs %}{{ JOB_LABELS[j.kind] }}{{ ', ' if not loop.last }}{% endfor %}</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>פוסטים ביום (14 ימים)</h2>
+  {% if chart.labels %}
+    <div class="chart"><canvas data-chart="bar" data-source="chart-daily"></canvas></div>
+    <script type="application/json" id="chart-daily">{{ chart|tojson }}</script>
+  {% else %}<p class="muted">עוד אין פרסומים.</p>{% endif %}
+</section>
+
+<section class="grid cols-2">
+  <div class="card">
+    <div class="card-head">
+      <h2>🔑 טוקנים</h2>
+      {{ post_button(url_for('refresh_status'), 'בדוק עכשיו') }}
+    </div>
+    {% if tokens.tokens %}
+      <table>
+        <tr><th>טוקן</th><th>מצב</th><th>פג תוקף</th></tr>
+        {% for t in tokens.tokens %}
+          <tr class="{{ 'bad' if not t.ok else ('warn' if t.expiring) }}">
+            <td>{{ t.name }}</td>
+            <td>{{ '✅' if t.ok else '❌' }} <span class="small muted">{{ t.message|truncate(60) }}</span></td>
+            <td>{{ t.expires_at|il('%d/%m/%Y') if t.expires_at else 'לא פג' }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+      <p class="small muted">נבדק {{ tokens.checked_at|ago }}</p>
+    {% else %}<p class="muted">עוד לא נבדק. לחצו "בדוק עכשיו".</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>⚠️ שגיאות אחרונות</h2>
+    {% if errors %}
+      <ul class="errors">
+        {% for e in errors %}<li><span class="muted small">{{ e.at|il }}</span> <b>{{ e.source }}</b>: {{ e.message|truncate(160) }}</li>{% endfor %}
+      </ul>
+      <p class="small"><a href="{{ url_for('logs', level='warning') }}">כל השגיאות בלוג ←</a></p>
+    {% else %}<p class="muted">אין שגיאות 🎉</p>{% endif %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>פרסומים אחרונים</h2>
+  {% if publications %}
+  <div class="table-wrap"><table>
+    <tr><th>זמן</th><th>ערוץ</th><th>רשת</th><th>מוצר</th><th>מחיר</th></tr>
+    {% for p in publications %}
+      <tr><td>{{ p.published_at|il }}</td><td>{{ p.channel_key|channel_label }}</td><td>{{ badge_platform(p.platform) }}</td>
+          <td><a href="https://www.aliexpress.com/item/{{ p.product_id }}.html" target="_blank" rel="noopener noreferrer">{{ p.product_id }}</a></td>
+          <td>{{ p.price }} {{ p.currency }}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="muted">עוד אין.</p>{% endif %}
+</section>
+{% endblock %}

@@ -54,3 +54,24 @@ def test_rate_limit_is_retryable_error():
     from alitrends.aliexpress import RateLimited
     with pytest.raises(RateLimited):
         AliExpressClient._unwrap("x.y", {"error_response": {"code": "ApiCallLimit", "msg": "slow down"}})
+
+
+@pytest.mark.parametrize("url,expected", [
+    ("https://www.aliexpress.com/item/1005006760481532.html?spm=a2g0o", "1005006760481532"),
+    ("https://he.aliexpress.com/item/1005006760481532.html", "1005006760481532"),
+    ("https://m.aliexpress.com/p/detail?productIds=1005006760481532", "1005006760481532"),
+    ("1005006760481532", "1005006760481532"),
+])
+def test_product_id_from_url(url, expected):
+    from alitrends.aliexpress import product_id_from_url
+    assert product_id_from_url(url) == expected
+
+
+def test_parse_order_handles_field_variants():
+    from alitrends.aliexpress import parse_order
+    order = parse_order({"order_id": 11, "sub_order_id": 12, "tracking_id": "he_main", "paid_amount": "1,020.50",
+                         "estimated_paid_commission": "71.4", "order_status": "Payment Completed",
+                         "created_time": "2026-09-20 10:00:00", "settled_currency": "USD"})
+    assert order["order_key"] == "12" and order["tracking_id"] == "he_main"
+    assert order["paid_amount"] == 1020.5 and order["commission"] == 71.4
+    assert parse_order({"tracking_id": "x"}) is None

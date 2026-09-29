@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}קוד כניסה{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<div class="card login">
+  <h1>📱 קוד מטלגרם</h1>
+  <p>שלחנו קוד בן 6 ספרות לצ'אט האדמין בטלגרם. הקוד תקף ל-5 דקות.</p>
+  <form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>קוד<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required autofocus class="code-input"></label>
+    <button class="primary wide">כניסה</button>
+  </form>
+  <p class="small"><a href="{{ url_for('login') }}">חזרה</a></p>
+</div>
+{% endblock %}

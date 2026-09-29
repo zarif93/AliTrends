@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% from "macros.html" import post_button, badge_platform, csrf %}
+{% block title %}{{ channel.key|channel_label }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ channel.key|channel_label }} {% if not channel.enabled %}<span class="badge off">כבוי</span>{% endif %}</h1>
+  <a href="{{ url_for('channels') }}">← כל הערוצים</a>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>👀 תצוגה מקדימה ופרסום</h2>
+    <div>
+      <button class="primary" data-job="{{ url_for('channel_preview', channel_id=channel.id) }}" data-output="#job-output">תצוגה מקדימה</button>
+      <button class="danger" data-job="{{ url_for('channel_post_now', channel_id=channel.id) }}" data-output="#job-output"
+              data-confirm="לפרסם עכשיו מוצר לכל היעדים הפעילים של הערוץ?">פרסם עכשיו</button>
+    </div>
+  </div>
+  <p class="small muted">התצוגה המקדימה בוחרת מוצר וכותבת פוסט בלי לפרסם. הבוט מבצע את זה תוך כמה שניות (בשבת: רק תצוגה מקדימה).</p>
+  <div id="job-output" class="job-output"></div>
+</section>
+
+<section class="grid cols-2">
+  <div class="card">
+    <h2>⚙️ הגדרות הערוץ</h2>
+    <form method="post">
+      {{ csrf() }}
+      <label class="check"><input type="checkbox" name="enabled" value="1" {{ 'checked' if channel.enabled }}> ערוץ פעיל</label>
+      <label>Tracking ID
+        <input name="tracking_id" value="{{ channel.tracking_id or '' }}" placeholder="{{ default_tracking }} (ברירת מחדל)" dir="ltr">
+        <span class="hint">צרו Tracking ID בפורטל השותפים של אליאקספרס כדי לראות כמה הערוץ הזה מכניס.</span>
+      </label>
+      <label>לפרסם כל כמה סבבים
+        <input type="number" name="every_n_cycles" min="1" max="48" value="{{ channel.every_n_cycles }}">
+        <span class="hint">1 = בכל סבב. 2 = כל סבב שני וכו'.</span>
+      </label>
+      <fieldset>
+        <legend>שעות פעילות (שעון {{ channel.market.timezone }})</legend>
+        <div class="row">
+          <label>מ-<input type="time" name="active_from" value="{{ channel.active_from or '' }}"></label>
+          <label>עד<input type="time" name="active_to" value="{{ channel.active_to or '' }}"></label>
+        </div>
+        <span class="hint">ריק = כל היום. אפשר גם טווח שחוצה חצות, למשל 20:00 עד 02:00.</span>
+      </fieldset>
+      <button class="primary">שמירה</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>📊 7 ימים אחרונים</h2>
+    {% if week %}
+      <p>{% for p, n in week.items() %}{{ badge_platform(p) }} {{ n }}&nbsp; {% endfor %}</p>
+    {% else %}<p class="muted">אין פרסומים בשבוע האחרון.</p>{% endif %}
+    {% if jobs %}
+      <h3>פעולות אחרונות</h3>
+      <ul class="plain small">
+      {% for j in jobs %}<li>{{ j.created_at|il }} · {{ JOB_LABELS[j.kind] }} · {{ JOB_STATUS_LABELS[j.status] }}{% if j.result and j.result.error %} <span class="error-text">({{ j.result.error|truncate(100) }})</span>{% endif %}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    <h3>מחיקה</h3>
+    {{ post_button(url_for('channel_delete', channel_id=channel.id), 'מחק ערוץ', 'danger small', confirm='למחוק את הערוץ וכל היעדים שלו? אפשר לשחזר מיומן השינויים.') }}
+  </div>
+</section>
+
+<section class="card">
+  <h2>🎯 יעדים</h2>
+  {% if channel.targets %}
+  <div class="table-wrap"><table>
+    <tr><th>רשת</th><th>מזהה</th><th>שם</th><th>מצב</th><th></th></tr>
+    {% for t in channel.targets %}
+    <tr class="{{ '' if t.enabled else 'disabled' }}">
+      <td>{{ badge_platform(t.platform, t.enabled) }}</td>
+      <td dir="ltr" class="mono">{{ t.target_id }}</td>
+      <td>{{ t.label }}
+        {% if PLATFORMS[t.platform].needs_target_secret %}
+          <br><span class="small muted">טוקן: {{ 'מוגדר' if t.secret else 'חסר' }}{% if t.secret_expires_at %}, פג {{ t.secret_expires_at|il('%d/%m/%Y') }}{% endif %}</span>
+        {% endif %}
+      </td>
+      <td>{{ 'פעיל' if t.enabled else 'כבוי' }}</td>
+      <td class="actions">
+        {{ post_button(url_for('target_toggle', target_id=t.id), 'כבה' if t.enabled else 'הפעל', 'small') }}
+        {{ post_button(url_for('target_delete', target_id=t.id), 'מחק', 'small danger', confirm='למחוק את היעד?') }}
+        {% if PLATFORMS[t.platform].needs_target_secret %}
+          <details class="inline-details"><summary class="button small">החלף טוקן</summary>
+            <form method="post" action="{{ url_for('target_secret', target_id=t.id) }}">
+              {{ csrf() }}<input name="secret" type="password" placeholder="טוקן חדש" required autocomplete="off"><button class="small primary">שמור</button>
+            </form>
+          </details>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="error-text">לערוץ אין יעדים, אז הוא לא יפרסם כלום.</p>{% endif %}
+
+  <h3>הוספת יעד</h3>
+  <form method="post" action="{{ url_for('target_add', channel_id=channel.id) }}" class="target-form">
+    {{ csrf() }}
+    <div class="row wrap">
+      <label>רשת
+        <select name="platform" data-platform-select>
+          {% for name, cls in PLATFORMS.items() %}<option value="{{ name }}" data-hint="{{ cls.target_hint }}" data-secret="{{ '1' if cls.needs_target_secret else '' }}">{{ cls.label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="grow">מזהה<input name="target_id" dir="ltr" autocomplete="off" data-target-id></label>
+      <label class="grow" data-secret-field hidden>טוקן<input name="secret" type="password" dir="ltr" autocomplete="off"></label>
+      <label>שם לתצוגה (לא חובה)<input name="label"></label>
+    </div>
+    <p class="hint" data-platform-hint></p>
+    <label class="check small"><input type="checkbox" name="skip_check" value="1"> שמור בלי לבדוק מול הרשת</label>
+    <button class="primary">הוספה</button>
+  </form>
+</section>
+{% endblock %}
