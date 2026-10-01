@@ -131,3 +131,27 @@ def test_threads_followers():
     session = FakeSession({("GET", "/u1/threads_insights"): [
         {"data": [{"name": "followers_count", "total_value": {"value": 42}}]}]})
     assert ThreadsPlatform(lambda *a: None, session=session).followers(Target(1, 1, "threads", "u1", secret="t")) == 42
+
+
+def test_facebook_token_valid_even_when_debug_token_refuses():
+    accounts, _ = meta({("GET", "/me"): [{"id": "1", "name": "Admin"}],
+                        ("GET", "/debug_token"): [{"error": {"message": "(#100) You must provide an app access token"}}]})
+    info = accounts.token_info()
+    assert info.ok and info.expires_at is None and "לא ידוע" in info.message
+
+
+def test_facebook_never_expiring_token():
+    accounts, _ = meta({("GET", "/me"): [{"id": "1", "name": "Admin"}],
+                        ("GET", "/debug_token"): [{"data": {"is_valid": True, "expires_at": 0,
+                                                            "data_access_expires_at": 1700000000}}]})
+    info = accounts.token_info()
+    assert info.ok and info.expires_at is None and "ללא תאריך תפוגה" in info.message
+
+
+def test_facebook_expiring_token_and_broken_token():
+    accounts, _ = meta({("GET", "/me"): [{"id": "1"}],
+                        ("GET", "/debug_token"): [{"data": {"is_valid": True, "expires_at": 4102444800}}]})
+    assert accounts.token_info().expires_at.year == 2100
+    broken, _ = meta({("GET", "/me"): [{"error": {"message": "Error validating access token: Session has expired"}}]})
+    info = broken.token_info()
+    assert not info.ok and "expired" in info.message

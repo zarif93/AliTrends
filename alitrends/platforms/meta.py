@@ -57,17 +57,24 @@ class MetaAccounts:
         name = "פייסבוק/אינסטגרם (FACE_TOKEN)"
         if not self.user_token:
             return TokenInfo(name, False, message="לא מוגדר")
+        # Validity is decided by a real call: debug_token refuses some token types (system users, page
+        # tokens) when asked with the token itself, which says nothing about whether the token works.
+        try:
+            me = graph_json(self.session, "GET", f"{GRAPH_URL}/me", "Facebook API",
+                            params={"fields": "id,name", "access_token": self.user_token})
+        except PublishError as exc:
+            return TokenInfo(name, False, message=str(exc))
+        expires, message = None, me.get("name", "")
         try:
             data = graph_json(self.session, "GET", f"{GRAPH_URL}/debug_token", "Facebook API", params={
                 "input_token": self.user_token, "access_token": self.user_token}).get("data", {})
-        except PublishError as exc:
-            return TokenInfo(name, False, message=str(exc))
-        if not data.get("is_valid"):
-            return TokenInfo(name, False, message=(data.get("error") or {}).get("message", "הטוקן לא תקף"))
-        # expires_at 0 means a non-expiring token; data access still lapses after ~90 days of no use.
-        stamps = [s for s in (data.get("expires_at"), data.get("data_access_expires_at")) if s]
-        expires = datetime.fromtimestamp(min(stamps), timezone.utc) if stamps else None
-        return TokenInfo(name, True, expires, message=", ".join(data.get("scopes", [])[:8]))
+            if data.get("expires_at"):  # 0 = never expires
+                expires = datetime.fromtimestamp(data["expires_at"], timezone.utc)
+            else:
+                message += " · ללא תאריך תפוגה"
+        except PublishError:
+            message += " · תאריך תפוגה לא ידוע"
+        return TokenInfo(name, True, expires, message=message)
 
 
 class FacebookPlatform(Platform):
