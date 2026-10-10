@@ -24,7 +24,7 @@
       <dt>דופק אחרון</dt><dd>{{ heartbeat|ago }}</dd>
       {% if state.next_cycle_at and not tuning.paused %}<dt>הסבב הבא</dt><dd>{{ state.next_cycle_at|il }} ({{ state.next_cycle_at|ago }})</dd>{% endif %}
       {% if last_cycle %}<dt>סבב אחרון</dt><dd>{{ last_cycle.finished_at|il }}: {{ last_cycle.published }} פורסמו, {{ last_cycle.errors }} שגיאות{% if last_cycle.off_hours %}, {{ last_cycle.off_hours }} מחוץ לשעות{% endif %}</dd>{% endif %}
-      {% if shabbat and tuning.shabbat_enabled %}<dt>שבת</dt><dd>🕯️ הפרסום עצור עד מוצ"ש</dd>{% endif %}
+      {% if shabbat %}<dt>{{ shabbat.name }}</dt><dd>🕯️ הפרסום עצור עד {{ shabbat.end|il }}</dd>{% endif %}
     </dl>
   </div>
 

@@ -22,7 +22,7 @@ from .config import Channel, Secrets, Target, Tuning, legacy_channels_from_env, 
 from .copywriter import Copywriter, CopyError
 from .platforms import PLATFORM_CLASSES, Platform, PublishError, TelegramPublisher, build_platforms, platform_label
 from .render import render
-from .schedule import is_shabbat, now_israel, resume_time
+from .schedule import QuietWindow, now_israel, quiet_window
 from .sourcing import ProductSource
 from .storage import Storage
 
@@ -166,8 +166,13 @@ class Bot:
             self._last_daily_check = time.monotonic()
             self._maybe_daily_tasks()
 
+    def _quiet_window(self) -> QuietWindow | None:
+        if not self.tuning.shabbat_enabled:
+            return None
+        return quiet_window(now_israel(), self.tuning.shabbat_stop_minutes, self.tuning.shabbat_resume_minutes)
+
     def _shabbat_now(self) -> bool:
-        return self.tuning.shabbat_enabled and is_shabbat(now_israel())
+        return self._quiet_window() is not None
 
     def run_cycle(self, limit: int | None = None, only: str | None = None) -> CycleReport:
         report = CycleReport()
@@ -187,12 +192,12 @@ class Bot:
             if not channel.is_due(cycle_no):
                 report.not_due += 1
                 continue
-            self._wait_out_shabbat()
+            if posted_any and not self.dry_run:
+                self._sleep(self.tuning.post_delay_seconds)
+            self._wait_out_shabbat()  # after the delay, which may have run into the window
             if not channel.in_active_hours(_utcnow()):
                 report.off_hours += 1
                 continue
-            if posted_any and not self.dry_run:
-                self._sleep(self.tuning.post_delay_seconds)
             posted_any |= self._process(channel, report)
             self._tick()
         return report
@@ -214,18 +219,20 @@ class Bot:
                 self._error(report, f"{platform.label} tokens", str(exc))
 
     def _wait_out_shabbat(self) -> None:
-        if not self._shabbat_now():
+        window = self._quiet_window()
+        if not window:
             return
-        until = resume_time(now_israel())
-        log.info("Shabbat: pausing until %s", until.isoformat())
-        self._set_state("shabbat", next_cycle_at=until)
+        log.info("%s: pausing until %s", window.name, window.end.isoformat())
+        self._set_state("shabbat", next_cycle_at=window.end)
         if not self.dry_run:
-            self.telegram.notify_admin("עוצרים לכבוד שבת 🕯️", silent=False)
-        while now_israel() < until:
-            self._sleep(min(600, max(1, (until - now_israel()).total_seconds())))
+            self.telegram.notify_admin(f"עוצרים לכבוד {window.name} 🕯️ (חוזרים ב-{window.end:%H:%M})", silent=False)
+        # Re-check rather than sleeping to a fixed time, so a settings change in the panel applies.
+        while (window := self._quiet_window()) is not None:
+            self._sleep(min(600, max(1, (window.end - now_israel()).total_seconds())))
+            self.tuning = self.storage.tuning()
         self._set_state("running")
         if not self.dry_run:
-            self.telegram.notify_admin("שבת יצאה, שבוע טוב! ✨", silent=False)
+            self.telegram.notify_admin("שבוע טוב! ✨ חוזרים לפרסם", silent=False)
 
     def _error(self, report: CycleReport | None, source: str, message: str) -> None:
         log.error("%s: %s", source, message)

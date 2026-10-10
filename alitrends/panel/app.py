@@ -19,7 +19,7 @@ from ..aliexpress import product_id_from_url
 from ..config import (CHANNEL_CATEGORIES, MAIN, MARKETS, SETTING_FIELDS, Secrets, parse_hhmm,
                       parse_setting)
 from ..platforms import PLATFORM_CLASSES, Platform, PublishError, TelegramPublisher, build_platforms, platform_label
-from ..schedule import ISRAEL, is_shabbat, now_israel
+from ..schedule import ISRAEL, now_israel, quiet_window
 from ..storage import Storage, StorageError
 from . import auth
 
@@ -45,6 +45,13 @@ STATE_LABELS = {"running": "מפרסם", "sleeping": "ממתין לסבב הבא
 JOB_LABELS = {"preview": "תצוגה מקדימה", "post_channel": "פרסום עכשיו", "manual_post": "פרסום ידני",
               "sync_commissions": "סנכרון עמלות", "refresh_status": "בדיקת טוקנים ומנויים"}
 JOB_STATUS_LABELS = {"pending": "ממתין", "running": "רץ", "done": "הושלם", "failed": "נכשל", "cancelled": "בוטל"}
+
+
+def _quiet(tuning):
+    """The Shabbat / Yom Tov window in effect now, or None (also when the stop is turned off)."""
+    if not tuning.shabbat_enabled:
+        return None
+    return quiet_window(now_israel(), tuning.shabbat_stop_minutes, tuning.shabbat_resume_minutes)
 
 
 def _parse_time(value: str | None) -> datetime | None:
@@ -270,7 +277,7 @@ def create_app(secrets_: Secrets, *, telegram: TelegramPublisher | None = None,
             by_platform=by_platform, by_language=s.stats_by_language_since(day_ago),
             total=sum(by_platform.values()), errors_24h=s.errors_since(day_ago),
             errors=s.recent_errors(8), publications=s.recent_publications(10),
-            tokens=tokens, chart=chart, shabbat=is_shabbat(now_israel()),
+            tokens=tokens, chart=chart, shabbat=_quiet(tuning),
             channel_count=len(channels), live_channels=sum(1 for c in channels if c.enabled and c.live_targets),
             pending_jobs=[j for j in s.jobs(limit=20) if j["status"] in ("pending", "running")],
             now=now,
@@ -612,7 +619,7 @@ def create_app(secrets_: Secrets, *, telegram: TelegramPublisher | None = None,
             return redirect(url_for("manual"))
         keys = {c.id: c.key for c in channels}
         return render_template("manual.html", channels=channels, jobs=s.jobs(("manual_post",), limit=50),
-                               keys=keys, shabbat=is_shabbat(now_israel()))
+                               keys=keys, shabbat=_quiet(s.tuning()))
 
     # --- commissions --------------------------------------------------------------------
 

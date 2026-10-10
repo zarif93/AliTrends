@@ -9,6 +9,7 @@ from alitrends.aliexpress import Product
 from alitrends.config import Tuning
 from alitrends.platforms.base import Platform, PublishError
 from alitrends.runner import Bot, CycleReport
+from alitrends.schedule import QuietWindow
 from alitrends.storage import Storage
 
 PRODUCT = Product("p1", "Nice thing", "https://cdn/x.jpg", "https://s.click/e/x", Decimal("10"), Decimal("20"),
@@ -75,7 +76,8 @@ def bot(tmp_path, monkeypatch):
     b.telegram = FakeTelegram()
     b.client = FakeClient()
     b._in_jobs = False
-    b._last_heartbeat = b._last_daily_check = 0.0
+    b._last_heartbeat = 0.0
+    b._last_daily_check = float("inf")  # the daily tasks would otherwise run when tests run after 21:00
     b.reload = lambda: setattr(b, "channels", b.storage.channels(only_enabled=True))
     monkeypatch.setattr(runner.time, "sleep", lambda s: None)
     yield b
@@ -169,7 +171,8 @@ def test_manual_post_all_failed(bot):
 def test_publishing_jobs_wait_for_shabbat_end(bot, monkeypatch):
     cid = add_channel(bot)
     bot.tuning = Tuning(shabbat_enabled=True)
-    monkeypatch.setattr(runner, "is_shabbat", lambda moment: True)
+    window = QuietWindow(datetime(2026, 1, 1, tzinfo=timezone.utc), datetime(2026, 1, 2, tzinfo=timezone.utc), "שבת")
+    monkeypatch.setattr(runner, "quiet_window", lambda moment, before, after: window)
     post = bot.storage.add_job("post_channel", {"channel_id": cid})
     preview = bot.storage.add_job("preview", {"channel_id": cid})
     bot._run_jobs()
@@ -182,3 +185,15 @@ def test_no_live_targets_is_skipped(bot):
     bot.reload()
     report = CycleReport()
     assert bot._process(bot.storage.channel(cid), report) is False and report.skipped == 1
+
+
+def test_cycle_waits_out_the_window_then_posts(bot, monkeypatch):
+    add_channel(bot)
+    bot.reload()
+    bot.tuning = Tuning(post_delay_seconds=0, shabbat_enabled=True)
+    window = QuietWindow(datetime(2026, 1, 1, tzinfo=timezone.utc), datetime(2026, 1, 2, tzinfo=timezone.utc), "יום כיפור")
+    checks = iter([window, window, window])  # inside for a few checks, then over
+    monkeypatch.setattr(runner, "quiet_window", lambda moment, before, after: next(checks, None))
+    report = bot.run_cycle()
+    assert report.published == 1
+    assert bot.storage.get_meta_json("bot_state", {})["state"] == "running"

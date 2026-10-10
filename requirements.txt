@@ -2,6 +2,7 @@ pyTelegramBotAPI>=4.26,<5
 openai>=1.63,<2
 requests>=2.32,<3
 python-dotenv>=1.0,<2
+pyluach>=2.2,<3   # Hebrew calendar, for the Yom Tov days
 tzdata>=2024.1   # IANA timezones for zoneinfo on Windows; harmless on Linux
 flask>=3.0,<4
 waitress>=3.0,<4

@@ -23,8 +23,10 @@ AliExpress Affiliate API ─► sourcing ─► copywriter (OpenAI) ─► rende
 4. **Render** (`alitrends/render.py`): adds localized price / discount / rating / sales lines within each
    platform's limits (Telegram 1024 with a link button, Threads 500, Instagram 2200, Facebook inline link).
 5. **Publish** (`alitrends/platforms/`): each target is isolated; one failure never stops the cycle.
-6. **Shabbat** (`alitrends/schedule.py`): no posting from Friday 14:00 to Saturday 21:30 **Israel time**,
-   checked before every post (manual and scheduled posts wait too).
+6. **Shabbat and Yom Tov** (`alitrends/schedule.py`): no posting from an hour before sunset on the eve of
+   Shabbat or a Yom Tov kept in Israel until an hour after sunset when it ends (Jerusalem sunset; both
+   margins are set in the panel). Consecutive rest days, like Rosh Hashana next to Shabbat, are one window.
+   Checked before every post (manual and scheduled posts wait too).
 
 ### Channels, targets and settings
 

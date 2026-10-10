@@ -121,6 +121,8 @@ class Tuning:
     repost_cooldown_days: int = 21
     pool_ttl_seconds: int = 6 * 3600
     shabbat_enabled: bool = True
+    shabbat_stop_minutes: int = 60       # before sunset on the eve of Shabbat / Yom Tov
+    shabbat_resume_minutes: int = 60     # after sunset when it ends
     daily_report_hour: int = 21          # Israel time
     min_rating: float = 4.5
     min_sales: int = 100
@@ -180,7 +182,9 @@ class SettingField:
 SETTING_FIELDS: tuple[SettingField, ...] = (
     SettingField("post_delay_seconds", "המתנה בין פוסטים (שניות)", int, "בין ערוץ לערוץ באותו סבב", 0, 3600),
     SettingField("cycle_sleep_seconds", "המתנה בין סבבים (שניות)", int, "4900 = כשעה ו-20 דקות", 60, 86400),
-    SettingField("shabbat_enabled", "עצירה בשבת", bool, "שישי 14:00 עד מוצ\"ש 21:30 שעון ישראל"),
+    SettingField("shabbat_enabled", "עצירה בשבת וחג", bool, "לפי שקיעה בירושלים, כולל ימים טובים בישראל"),
+    SettingField("shabbat_stop_minutes", "עצירה לפני השקיעה (דקות)", int, "בערב שבת / חג. הדלקת נרות בירושלים: 40", 0, 300),
+    SettingField("shabbat_resume_minutes", "חזרה אחרי השקיעה (דקות)", int, "במוצאי שבת / חג. רבנו תם: 72", 0, 300),
     SettingField("daily_report_hour", "שעת הדוח היומי (שעון ישראל)", int, "גם גיבוי, מנויים ועמלות", 0, 23),
     SettingField("openai_model", "מודל OpenAI", str, "למשל gpt-4o-mini"),
     SettingField("hot_products_enabled", "מוצרים חמים", bool, "מוצרים עם עמלה מוגדלת קודם", group="filters"),
