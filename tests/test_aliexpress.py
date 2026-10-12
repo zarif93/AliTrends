@@ -75,3 +75,8 @@ def test_parse_order_handles_field_variants():
     assert order["order_key"] == "12" and order["tracking_id"] == "he_main"
     assert order["paid_amount"] == 1020.5 and order["commission"] == 71.4
     assert parse_order({"tracking_id": "x"}) is None
+
+
+def test_product_video_url():
+    assert Product.from_api(RAW).video_url == ""
+    assert Product.from_api({**RAW, "product_video_url": "https://v/x.mp4"}).video_url == "https://v/x.mp4"

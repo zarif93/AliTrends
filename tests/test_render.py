@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from alitrends.aliexpress import Product
 from alitrends.config import MARKETS
-from alitrends.render import TELEGRAM_CAPTION_LIMIT, compact_count, money, render
+from alitrends.render import TELEGRAM_CAPTION_LIMIT, compact_count, link_comment, money, render
 
 PRODUCT = Product("1", "t", "img", "https://s.click.aliexpress.com/e/x", Decimal("24.90"), Decimal("51.00"),
                   "ILS", 51, 4.9, 12500, 7.0, "Earphones")
@@ -22,8 +22,9 @@ def test_telegram_has_prices_but_no_link():
     assert "#אוזניות" in text
 
 
-def test_facebook_includes_link():
-    assert PRODUCT.promotion_link in render(PRODUCT, COPY, MARKETS["English"], "facebook")
+def test_facebook_keeps_link_out_of_the_post():
+    assert PRODUCT.promotion_link not in render(PRODUCT, COPY, MARKETS["English"], "facebook")
+    assert link_comment(PRODUCT, MARKETS["English"]) == f"🛒 View deal 👉 {PRODUCT.promotion_link}"
 
 
 def test_no_discount_hides_old_price():

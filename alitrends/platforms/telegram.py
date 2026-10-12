@@ -1,4 +1,4 @@
-"""Telegram: channel posts (photo + caption + link button) and admin messages."""
+"""Telegram: channel posts (photo or video + caption + link button) and admin messages."""
 from __future__ import annotations
 
 import logging
@@ -13,7 +13,7 @@ from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 from ..aliexpress import Product
 from ..config import Market, Target
 from ..render import button_text
-from .base import Platform, PublishError, TokenInfo
+from .base import Platform, PublishError, TokenInfo, video_or_image
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +41,12 @@ def download_jpeg(image_url: str, session: requests.Session | None = None) -> by
     return response.content
 
 
+def _keyboard(link: str, button: str) -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton(text=button, url=link))
+    return keyboard
+
+
 class TelegramPublisher:
     """Low-level Bot API client: channel photo posts with retries, and messages to the admin chat."""
 
@@ -53,8 +59,7 @@ class TelegramPublisher:
 
     def publish(self, chat_id: str, image_url: str, caption: str, link: str, button: str) -> str:
         """Send by URL; on a rate limit wait and retry, on a rejected photo upload a JPEG ourselves."""
-        keyboard = InlineKeyboardMarkup()
-        keyboard.add(InlineKeyboardButton(text=button, url=link))
+        keyboard = _keyboard(link, button)
         photo: str | bytes = image_url
 
         for attempt in range(3):
@@ -80,6 +85,26 @@ class TelegramPublisher:
                     continue
                 raise PublishError(f"Telegram {chat_id}: {exc}") from exc
             except Exception as exc:  # network errors and other telebot exception types
+                raise PublishError(f"Telegram {chat_id}: {exc}") from exc
+        raise PublishError(f"Telegram {chat_id}: gave up after retries")
+
+    def publish_video(self, chat_id: str, video_url: str, caption: str, link: str, button: str) -> str:
+        """Send an mp4 by URL (Telegram fetches up to 20MB itself); on a rate limit wait and retry."""
+        for attempt in range(3):
+            try:
+                message = self._bot.send_video(
+                    chat_id=chat_id, video=video_url, caption=caption, supports_streaming=True,
+                    reply_markup=_keyboard(link, button), disable_notification=True,
+                )
+                return str(message.message_id)
+            except ApiTelegramException as exc:
+                if exc.error_code == 429 and attempt < 2:
+                    wait = min(_retry_after(exc), MAX_RATE_LIMIT_WAIT)
+                    log.warning("Telegram %s rate limited, waiting %ss", chat_id, wait)
+                    self._sleep(wait + 1)
+                    continue
+                raise PublishError(f"Telegram {chat_id}: {exc}") from exc
+            except Exception as exc:
                 raise PublishError(f"Telegram {chat_id}: {exc}") from exc
         raise PublishError(f"Telegram {chat_id}: gave up after retries")
 
@@ -120,8 +145,11 @@ class TelegramPlatform(Platform):
         self.client = client
 
     def publish(self, target: Target, product: Product, text: str, market: Market) -> str:
-        return self.client.publish(target.target_id, product.image_url, text, product.promotion_link,
-                                   button_text(market))
+        args = (text, product.promotion_link, button_text(market))
+        return video_or_image(
+            product, f"Telegram {target.target_id}",
+            lambda: self.client.publish_video(target.target_id, product.video_url, *args),
+            lambda: self.client.publish(target.target_id, product.image_url, *args))
 
     def followers(self, target: Target) -> int | None:
         return self.client.member_count(target.target_id)

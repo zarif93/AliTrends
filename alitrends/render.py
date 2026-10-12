@@ -19,7 +19,8 @@ class PostStyle:
 
 STYLES: dict[str, PostStyle] = {
     "telegram": PostStyle(link_in_button=True, limit=TELEGRAM_CAPTION_LIMIT, max_hashtags=6),
-    "facebook": PostStyle(link_in_button=False, limit=60_000, max_hashtags=6),
+    # Facebook shows posts with outside links to fewer people, so the link goes in the first comment.
+    "facebook": PostStyle(link_in_button=True, limit=60_000, max_hashtags=6),
     # Instagram captions don't make links clickable, but the short link can still be copied.
     "instagram": PostStyle(link_in_button=False, limit=2_200, max_hashtags=8),
     # Threads allows 500 characters and a single topic tag per post.
@@ -57,6 +58,11 @@ def compact_count(n: int) -> str:
 
 def button_text(market: Market) -> str:
     return LABELS[market.language]["button"]
+
+
+def link_comment(product: Product, market: Market) -> str:
+    """The comment that carries the link on platforms that keep it out of the post itself."""
+    return f"{button_text(market)} {LABELS[market.language]['link']} {product.promotion_link}"
 
 
 def deal_lines(product: Product, market: Market) -> list[str]:

@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 class QualityBar:
     min_rating: float = 4.5
     min_sales: int = 100
+    max_discount: int = 100  # above ~80% the price is usually a new-user deal most buyers won't get
 
 
 def score(p: Product) -> float:
@@ -34,7 +35,7 @@ def score(p: Product) -> float:
 def passes(p: Product, bar: QualityBar, market: Market, min_discount: int | None = None) -> bool:
     return (
         p.sales >= bar.min_sales
-        and p.discount >= (market.min_discount if min_discount is None else min_discount)
+        and (market.min_discount if min_discount is None else min_discount) <= p.discount <= bar.max_discount
         and (p.rating is None or p.rating >= bar.min_rating)
     )
 
@@ -71,7 +72,7 @@ class ProductSource:
 
     def configure(self, tuning: Tuning) -> None:
         """Apply panel settings; cached pools are dropped when the filters that built them change."""
-        bar = QualityBar(min_rating=tuning.min_rating, min_sales=tuning.min_sales)
+        bar = QualityBar(min_rating=tuning.min_rating, min_sales=tuning.min_sales, max_discount=tuning.max_discount)
         discounts = dict(tuning.min_discount)
         if (bar, tuning.hot_products_enabled, discounts) != (self._bar, self._hot_enabled, self._min_discounts):
             self._pools.clear()

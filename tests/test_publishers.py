@@ -1,10 +1,17 @@
+from dataclasses import replace
+from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
 from telebot.apihelper import ApiTelegramException
 
+from alitrends.aliexpress import Product
+from alitrends.config import MARKETS, Target
 from alitrends.platforms.base import PublishError
-from alitrends.platforms.telegram import TelegramPublisher, jpeg_url
+from alitrends.platforms.telegram import TelegramPlatform, TelegramPublisher, jpeg_url
+
+PRODUCT = Product("1", "t", "https://cdn/x.jpg", "https://s.click/e/x", Decimal("10"), Decimal("20"), "USD",
+                  50, 4.8, 500, 7.0, "cat")
 
 
 def tg_error(code, description, retry_after=None):
@@ -72,3 +79,39 @@ def test_gives_up_after_repeated_rate_limits():
 def test_jpeg_url_suffix():
     assert jpeg_url("https://cdn/kf/S1.jpg") == "https://cdn/kf/S1.jpg_960x960.jpg"
     assert jpeg_url("https://cdn/kf/S1.jpg_960x960.jpg") == "https://cdn/kf/S1.jpg_960x960.jpg"
+
+
+class FakeVideoBot(FakeBot):
+    def __init__(self, video_outcome, *photo_outcomes):
+        super().__init__(*photo_outcomes)
+        self.video_outcome = video_outcome
+        self.videos = []
+
+    def send_video(self, chat_id, video, **kwargs):
+        self.videos.append(video)
+        if isinstance(self.video_outcome, Exception):
+            raise self.video_outcome
+        return SimpleNamespace(message_id=self.video_outcome)
+
+
+def telegram_post(bot, video_url):
+    product = replace(PRODUCT, video_url=video_url)
+    return TelegramPlatform(publisher(bot)).publish(Target(1, 1, "telegram", "-100"), product, "c", MARKETS["English"])
+
+
+def test_telegram_posts_video_when_there_is_one():
+    bot = FakeVideoBot(21)
+    assert telegram_post(bot, "https://video/x.mp4") == "21"
+    assert bot.videos == ["https://video/x.mp4"] and bot.photos == []
+
+
+def test_telegram_falls_back_to_photo_when_video_fails():
+    bot = FakeVideoBot(tg_error(400, "Bad Request: wrong file identifier/HTTP URL specified"), 11)
+    assert telegram_post(bot, "https://video/x.mp4") == "11"
+    assert bot.photos == ["https://cdn/x.jpg"]
+
+
+def test_telegram_without_video_posts_photo():
+    bot = FakeVideoBot(21, 11)
+    assert telegram_post(bot, "") == "11"
+    assert bot.videos == []

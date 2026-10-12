@@ -487,7 +487,7 @@ def _product_dict(product: Product) -> dict:
     return {"id": product.product_id, "title": product.title, "image": product.image_url,
             "link": product.promotion_link, "price": str(product.price), "currency": product.currency,
             "discount": product.discount, "rating": product.rating, "sales": product.sales,
-            "hot": product.hot, "commission": product.commission_rate}
+            "hot": product.hot, "commission": product.commission_rate, "video": product.video_url}
 
 
 def setup_logging(log_dir: str, verbose: bool, filename: str = "alitrends.log") -> None:

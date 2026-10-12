@@ -14,7 +14,7 @@ import requests
 
 from ..aliexpress import Product
 from ..config import Market, Target
-from .base import Platform, PublishError, SaveSecret, TokenInfo, graph_json
+from .base import Platform, PublishError, SaveSecret, TokenInfo, graph_json, video_or_image
 from .telegram import jpeg_url
 
 log = logging.getLogger(__name__)
@@ -75,12 +75,20 @@ class ThreadsPlatform(Platform):
     def publish(self, target: Target, product: Product, text: str, market: Market) -> str:
         user_id, token = target.target_id, self._secret(target)
         prefix = f"Threads {user_id}"
-        container = graph_json(self._session, "POST", f"{THREADS_URL}/{user_id}/threads", prefix, data={
-            "media_type": "IMAGE", "image_url": jpeg_url(product.image_url), "text": text, "access_token": token})
+        video = {"media_type": "VIDEO", "video_url": product.video_url}
+        image = {"media_type": "IMAGE", "image_url": jpeg_url(product.image_url)}
+        # Videos take longer to process, so they get more status checks.
+        return video_or_image(product, prefix,
+                              lambda: self._publish(user_id, token, prefix, text, video, attempts=36),
+                              lambda: self._publish(user_id, token, prefix, text, image))
+
+    def _publish(self, user_id: str, token: str, prefix: str, text: str, media: dict, attempts: int = 12) -> str:
+        container = graph_json(self._session, "POST", f"{THREADS_URL}/{user_id}/threads", prefix,
+                               data={**media, "text": text, "access_token": token})
         creation_id = container.get("id")
         if not creation_id:
             raise PublishError(f"{prefix}: no container id in {container}")
-        self._wait_ready(creation_id, token, prefix)
+        self._wait_ready(creation_id, token, prefix, attempts)
         published = graph_json(self._session, "POST", f"{THREADS_URL}/{user_id}/threads_publish", prefix,
                                data={"creation_id": creation_id, "access_token": token})
         if not published.get("id"):

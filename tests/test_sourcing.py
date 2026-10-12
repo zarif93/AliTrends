@@ -143,3 +143,9 @@ def test_configure_applies_thresholds_and_drops_pools(storage):
     source.configure(Tuning(min_sales=1000, hot_products_enabled=False))
     assert [p.product_id for p in source.pool(MARKET, CATEGORY)] == ["2"]
     assert client.calls["hot"] == 1  # the second refresh skipped hot products
+
+
+def test_discount_above_the_cap_is_rejected():
+    bar, us = QualityBar(max_discount=80), MARKETS["English"]
+    assert passes(make("a", discount=80), bar, us)
+    assert not passes(make("b", discount=96), bar, us)

@@ -14,7 +14,8 @@ import requests
 
 from ..aliexpress import Product
 from ..config import Market, Target
-from .base import Platform, PublishError, TokenInfo, graph_json
+from ..render import link_comment
+from .base import Platform, PublishError, TokenInfo, graph_json, video_or_image
 from .telegram import jpeg_url
 
 log = logging.getLogger(__name__)
@@ -100,12 +101,36 @@ class FacebookPlatform(Platform):
 
     def publish(self, target: Target, product: Product, text: str, market: Market) -> str:
         page_id = target.target_id
-        data = graph_json(self.accounts.session, "POST", f"{GRAPH_URL}/{page_id}/photos", f"Facebook {page_id}",
-                          data={"message": text, "url": product.image_url, "access_token": self._token(page_id)})
-        post_id = data.get("post_id") or data.get("id")
-        if not post_id:
-            raise PublishError(f"Facebook {page_id}: unexpected response {data}")
-        return str(post_id)
+        prefix = f"Facebook {page_id}"
+        token = self._token(page_id)
+
+        def post(edge: str, data: dict) -> str:
+            result = graph_json(self.accounts.session, "POST", f"{GRAPH_URL}/{page_id}/{edge}", prefix,
+                                data={**data, "access_token": token})
+            post_id = result.get("post_id") or result.get("id")
+            if not post_id:
+                raise PublishError(f"{prefix}: unexpected response {result}")
+            return str(post_id)
+
+        # Facebook fetches the video from the URL itself and processes it after answering.
+        post_id = video_or_image(product, prefix,
+                                 lambda: post("videos", {"file_url": product.video_url, "description": text}),
+                                 lambda: post("photos", {"url": product.image_url, "message": text}))
+        self._comment_link(post_id, token, prefix, link_comment(product, market))
+        return post_id
+
+    def _comment_link(self, post_id: str, token: str, prefix: str, message: str) -> None:
+        """The link lives in the first comment; a post that ended up without it is taken down again."""
+        session = self.accounts.session
+        try:
+            graph_json(session, "POST", f"{GRAPH_URL}/{post_id}/comments", prefix,
+                       data={"message": message, "access_token": token})
+        except PublishError as exc:
+            try:
+                graph_json(session, "DELETE", f"{GRAPH_URL}/{post_id}", prefix, params={"access_token": token})
+            except PublishError as delete_exc:
+                log.error("%s: post %s has no link and could not be removed: %s", prefix, post_id, delete_exc)
+            raise PublishError(f"{prefix}: link comment failed, post removed: {exc}") from exc
 
     def followers(self, target: Target) -> int | None:
         data = graph_json(self.accounts.session, "GET", f"{GRAPH_URL}/{target.target_id}", "Facebook API",
@@ -149,15 +174,22 @@ class InstagramPlatform(Platform):
         ig_id = target.target_id
         token = self._token(ig_id)
         prefix = f"Instagram {ig_id}"
+        # A video goes up as a Reel (processing takes a while); Instagram only accepts JPEG images,
+        # so use the CDN's resized JPEG variant.
+        reel = {"media_type": "REELS", "video_url": product.video_url}
+        image = {"image_url": jpeg_url(product.image_url)}
+        return video_or_image(product, prefix,
+                              lambda: self._publish(ig_id, token, prefix, text, reel, attempts=40),
+                              lambda: self._publish(ig_id, token, prefix, text, image))
+
+    def _publish(self, ig_id: str, token: str, prefix: str, text: str, media: dict, attempts: int = 10) -> str:
         session = self.accounts.session
-        # Instagram only accepts JPEG, so use the CDN's resized JPEG variant.
         container = graph_json(session, "POST", f"{GRAPH_URL}/{ig_id}/media", prefix,
-                               data={"image_url": jpeg_url(product.image_url), "caption": text,
-                                     "access_token": token})
+                               data={**media, "caption": text, "access_token": token})
         creation_id = container.get("id")
         if not creation_id:
             raise PublishError(f"{prefix}: no container id in {container}")
-        self._wait_ready(creation_id, token, prefix)
+        self._wait_ready(creation_id, token, prefix, attempts)
         published = graph_json(session, "POST", f"{GRAPH_URL}/{ig_id}/media_publish", prefix,
                                data={"creation_id": creation_id, "access_token": token})
         if not published.get("id"):

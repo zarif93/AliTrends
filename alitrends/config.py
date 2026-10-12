@@ -126,6 +126,7 @@ class Tuning:
     daily_report_hour: int = 21          # Israel time
     min_rating: float = 4.5
     min_sales: int = 100
+    max_discount: int = 80               # percent; higher is usually a new-user-only price
     hot_products_enabled: bool = True
     backup_enabled: bool = True
     watchdog_minutes: int = 45
@@ -190,6 +191,9 @@ SETTING_FIELDS: tuple[SettingField, ...] = (
     SettingField("hot_products_enabled", "מוצרים חמים", bool, "מוצרים עם עמלה מוגדלת קודם", group="filters"),
     SettingField("min_rating", "דירוג מינימלי", float, "מתוך 5", 0, 5, group="filters"),
     SettingField("min_sales", "מכירות מינימליות", int, "", 0, 1_000_000, group="filters"),
+    SettingField("max_discount", "הנחה מקסימלית (%)", int,
+                 "הנחה גבוהה מזה היא בדרך כלל מחיר למשתמש חדש שרוב הקונים לא יקבלו. 100 = בלי הגבלה",
+                 1, 100, group="filters"),
     SettingField("repost_cooldown_days", "ימים לפני פרסום חוזר של אותו מוצר", int, "", 0, 365, group="filters"),
     SettingField("pool_ttl_seconds", "רענון מאגר מוצרים (שניות)", int, "21600 = 6 שעות", 300, 86400, group="filters"),
     SettingField("backup_enabled", "גיבוי יומי לטלגרם", bool, group="alerts"),

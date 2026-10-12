@@ -137,6 +137,7 @@ class PinterestPlatform(Platform):
         self._access_token()  # refresh early so an expired token shows up once per cycle, not per pin
 
     def publish(self, target: Target, product: Product, text: str, market: Market) -> str:
+        # Always the image: video pins need a separate upload-and-wait flow through /media.
         # render() puts the headline on the first line; it becomes the pin title, the rest its description.
         title, _, rest = text.partition("\n")
         pin = self._request("POST", "/pins", json={

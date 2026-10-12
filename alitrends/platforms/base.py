@@ -2,6 +2,7 @@
 registered in platforms/__init__.py; the bot loop and the panel pick it up from there."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable, Iterable, Protocol
@@ -10,6 +11,8 @@ import requests
 
 from ..aliexpress import Product
 from ..config import Market, Target
+
+log = logging.getLogger(__name__)
 
 
 class PublishError(RuntimeError):
@@ -75,3 +78,13 @@ def graph_json(session: requests.Session, method: str, url: str, prefix: str, **
         error = data["error"]
         raise PublishError(f"{prefix}: {error.get('message') if isinstance(error, dict) else error}")
     return data
+
+
+def video_or_image(product: Product, prefix: str, video: Callable[[], str], image: Callable[[], str]) -> str:
+    """Post the product's video when it has one; if the platform refuses it, post the image instead."""
+    if product.video_url:
+        try:
+            return video()
+        except PublishError as exc:
+            log.warning("%s: video rejected, posting the image instead: %s", prefix, exc)
+    return image()

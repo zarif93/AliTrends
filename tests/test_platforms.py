@@ -1,3 +1,4 @@
+from dataclasses import replace
 from decimal import Decimal
 
 import pytest
@@ -45,11 +46,26 @@ def meta(routes):
     return MetaAccounts("utok", session), session
 
 
-def test_facebook_publish_uses_page_token():
-    accounts, session = meta({("POST", "/page1/photos"): [{"post_id": "page1_9"}]})
+COMMENT = {("POST", "/comments"): [{"id": "cm1"}]}
+
+
+def test_facebook_publish_uses_page_token_and_comments_the_link():
+    accounts, session = meta({("POST", "/page1/photos"): [{"post_id": "page1_9"}], **COMMENT})
     fb = FacebookPlatform(accounts)
     assert fb.publish(Target(1, 1, "facebook", "page1"), PRODUCT, "text", MARKET) == "page1_9"
-    assert session.calls[-1][2]["data"]["access_token"] == "ptok"
+    photo, comment = session.calls[-2], session.calls[-1]
+    assert photo[2]["data"]["access_token"] == "ptok"
+    assert comment[1].endswith("/page1_9/comments")
+    assert comment[2]["data"]["message"] == "🛒 View deal 👉 https://s.click/e/x"
+
+
+def test_facebook_post_without_link_comment_is_removed():
+    accounts, session = meta({("POST", "/page1/photos"): [{"post_id": "page1_9"}],
+                              ("POST", "/comments"): [{"error": {"message": "nope"}}],
+                              ("DELETE", "/page1_9"): [{"success": True}]})
+    with pytest.raises(PublishError, match="post removed"):
+        FacebookPlatform(accounts).publish(Target(1, 1, "facebook", "page1"), PRODUCT, "t", MARKET)
+    assert session.calls[-1][0] == "DELETE"
 
 
 def test_facebook_unknown_page():
@@ -155,3 +171,56 @@ def test_facebook_expiring_token_and_broken_token():
     broken, _ = meta({("GET", "/me"): [{"error": {"message": "Error validating access token: Session has expired"}}]})
     info = broken.token_info()
     assert not info.ok and "expired" in info.message
+
+
+VIDEO_PRODUCT = replace(PRODUCT, video_url="https://video/x.mp4")
+
+
+def test_facebook_posts_video_when_there_is_one():
+    accounts, session = meta({("POST", "/page1/videos"): [{"id": "v1"}], **COMMENT})
+    assert FacebookPlatform(accounts).publish(Target(1, 1, "facebook", "page1"), VIDEO_PRODUCT, "t", MARKET) == "v1"
+    data = session.calls[-2][2]["data"]
+    assert data["file_url"] == "https://video/x.mp4" and data["description"] == "t"
+
+
+def test_facebook_falls_back_to_photo_when_video_fails():
+    accounts, session = meta({("POST", "/page1/videos"): [{"error": {"message": "bad video"}}],
+                              ("POST", "/page1/photos"): [{"post_id": "page1_9"}], **COMMENT})
+    assert FacebookPlatform(accounts).publish(Target(1, 1, "facebook", "page1"), VIDEO_PRODUCT, "t", MARKET) == "page1_9"
+
+
+def test_instagram_video_is_a_reel():
+    accounts, session = meta({
+        ("POST", "/ig1/media"): [{"id": "c1"}],
+        ("GET", "/c1"): [{"status_code": "FINISHED"}],
+        ("POST", "/ig1/media_publish"): [{"id": "m1"}],
+    })
+    ig = InstagramPlatform(accounts, sleep=lambda s: None)
+    assert ig.publish(Target(1, 1, "instagram", "ig1"), VIDEO_PRODUCT, "caption", MARKET) == "m1"
+    create = next(c for c in session.calls if c[1].endswith("/ig1/media"))
+    assert create[2]["data"]["media_type"] == "REELS"
+    assert create[2]["data"]["video_url"] == "https://video/x.mp4"
+
+
+def test_instagram_falls_back_to_image_when_reel_fails():
+    accounts, session = meta({
+        ("POST", "/ig1/media"): [{"id": "c1"}, {"id": "c2"}],
+        ("GET", "/c1"): [{"status_code": "ERROR"}],
+        ("GET", "/c2"): [{"status_code": "FINISHED"}],
+        ("POST", "/ig1/media_publish"): [{"id": "m2"}],
+    })
+    ig = InstagramPlatform(accounts, sleep=lambda s: None)
+    assert ig.publish(Target(1, 1, "instagram", "ig1"), VIDEO_PRODUCT, "caption", MARKET) == "m2"
+    creates = [c[2]["data"] for c in session.calls if c[1].endswith("/ig1/media")]
+    assert "video_url" in creates[0] and "image_url" in creates[1]
+
+
+def test_threads_posts_video():
+    session = FakeSession({
+        ("POST", "/u1/threads"): [{"id": "c1"}],
+        ("GET", "/c1"): [{"status": "FINISHED"}],
+        ("POST", "/u1/threads_publish"): [{"id": "t1"}],
+    })
+    threads = ThreadsPlatform(lambda *a: None, session=session, sleep=lambda s: None)
+    assert threads.publish(Target(1, 1, "threads", "u1", secret="tok"), VIDEO_PRODUCT, "hi", MARKET) == "t1"
+    assert session.calls[0][2]["data"]["media_type"] == "VIDEO"

@@ -42,6 +42,7 @@ class Product:
     commission_rate: float # percent
     category: str
     hot: bool = False      # came from hotproduct.query
+    video_url: str = ""    # mp4 on AliExpress's CDN; most products have none
 
     @classmethod
     def from_api(cls, raw: dict[str, Any]) -> "Product | None":
@@ -67,6 +68,7 @@ class Product:
                 sales=int(raw.get("lastest_volume") or 0),
                 commission_rate=_percent(raw.get("hot_product_commission_rate") or raw.get("commission_rate")) or 0.0,
                 category=raw.get("second_level_category_name") or raw.get("first_level_category_name") or "",
+                video_url=raw.get("product_video_url") or "",
             )
         except (KeyError, ValueError, TypeError, InvalidOperation):
             log.debug("Skipping malformed product %r", raw.get("product_id"))
