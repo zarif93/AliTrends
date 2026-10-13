@@ -80,3 +80,10 @@ def test_parse_order_handles_field_variants():
 def test_product_video_url():
     assert Product.from_api(RAW).video_url == ""
     assert Product.from_api({**RAW, "product_video_url": "https://v/x.mp4"}).video_url == "https://v/x.mp4"
+
+
+def test_parse_order_amounts_in_cents():
+    from alitrends.aliexpress import parse_order
+    order = parse_order({"order_id": 1, "paid_amount": 382, "estimated_paid_commission": 26})
+    assert order["paid_amount"] == 3.82 and order["commission"] == 0.26
+    assert parse_order({"order_id": 1, "paid_amount": "382"})["paid_amount"] == 3.82

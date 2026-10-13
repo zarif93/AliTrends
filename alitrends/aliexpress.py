@@ -248,13 +248,16 @@ def parse_order(raw: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
     def number(*keys: str) -> float | None:
+        """Amounts come as whole cents (382 = 3.82); older API versions sent decimal strings like "3.82"."""
         for key in keys:
             value = raw.get(key)
-            if value not in (None, ""):
-                try:
-                    return float(str(value).replace(",", ""))
-                except ValueError:
-                    continue
+            if value in (None, ""):
+                continue
+            text = str(value).replace(",", "").strip()
+            try:
+                return int(text) / 100 if isinstance(value, int) or text.isdigit() else float(text)
+            except ValueError:
+                continue
         return None
 
     return {

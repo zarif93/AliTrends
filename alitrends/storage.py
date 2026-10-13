@@ -166,6 +166,21 @@ class Storage:
         self._con.execute("PRAGMA foreign_keys=ON")
         self._con.execute("PRAGMA busy_timeout=15000")
         self._con.executescript(SCHEMA)
+        self._fix_order_cents()
+
+    def _fix_order_cents(self) -> None:
+        """One-off: orders synced before 2026-10-13 kept order.list's cent amounts as if they were dollars."""
+        if self.get_meta("orders_cents_fixed"):
+            return
+        self._con.execute("BEGIN IMMEDIATE")  # the bot and the panel may open the database at the same moment
+        try:
+            if not self.get_meta("orders_cents_fixed"):
+                self._con.execute("UPDATE orders SET paid_amount = paid_amount / 100.0, commission = commission / 100.0")
+                self._con.execute("INSERT INTO meta (key, value) VALUES ('orders_cents_fixed', ?)", (_iso(),))
+            self._con.commit()
+        except Exception:
+            self._con.rollback()
+            raise
 
     def close(self) -> None:
         self._con.close()

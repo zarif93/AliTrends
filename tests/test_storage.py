@@ -126,3 +126,17 @@ def test_scrub_secrets_removes_stray_tokens_everywhere(s):
     secrets = {t.platform: t.secret for t in s.channel(cid).targets}
     assert secrets == {"pinterest": None, "threads": "real-token"}
     assert "panel-password" not in str(s.audit_log())
+
+
+def test_old_cent_amounts_are_fixed_once(tmp_path):
+    path = str(tmp_path / "old.db")
+    s = Storage(path)
+    s.upsert_orders([{"order_key": "1", "order_id": "1", "tracking_id": "t", "paid_amount": 382,
+                      "commission": 26, "created_time": "2026-10-10 14:25:40"}])
+    s._con.execute("DELETE FROM meta WHERE key = 'orders_cents_fixed'")  # as if stored by the old code
+    s._con.commit()
+    s.close()
+    for _ in range(2):  # opening again must not divide a second time
+        s = Storage(path)
+        assert s.recent_orders()[0]["paid_amount"] == 3.82 and s.recent_orders()[0]["commission"] == 0.26
+        s.close()
