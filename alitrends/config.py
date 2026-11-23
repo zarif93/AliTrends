@@ -127,6 +127,7 @@ class Tuning:
     min_rating: float = 4.5
     min_sales: int = 100
     max_discount: int = 80               # percent; higher is usually a new-user-only price
+    facebook_posts_per_day: int = 3      # per page, spread evenly; 0 = no limit
     hot_products_enabled: bool = True
     backup_enabled: bool = True
     watchdog_minutes: int = 45
@@ -188,6 +189,8 @@ SETTING_FIELDS: tuple[SettingField, ...] = (
     SettingField("shabbat_resume_minutes", "חזרה אחרי השקיעה (דקות)", int, "במוצאי שבת / חג. רבנו תם: 72", 0, 300),
     SettingField("daily_report_hour", "שעת הדוח היומי (שעון ישראל)", int, "גם גיבוי, מנויים ועמלות", 0, 23),
     SettingField("openai_model", "מודל OpenAI", str, "למשל gpt-4o-mini"),
+    SettingField("facebook_posts_per_day", "פוסטים ביום לכל עמוד פייסבוק", int,
+                 "מתפזרים לאורך היממה: 3 = לכל היותר פוסט כל 8 שעות. 0 = בלי הגבלה", 0, 48),
     SettingField("hot_products_enabled", "מוצרים חמים", bool, "מוצרים עם עמלה מוגדלת קודם", group="filters"),
     SettingField("min_rating", "דירוג מינימלי", float, "מתוך 5", 0, 5, group="filters"),
     SettingField("min_sales", "מכירות מינימליות", int, "", 0, 1_000_000, group="filters"),

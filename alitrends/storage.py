@@ -226,6 +226,13 @@ class Storage:
                 (channel_key, platform, product_id, external_id, price, currency, _iso()),
             )
 
+    def publication_times(self, channel_key: str, platform: str, since: datetime) -> list[datetime]:
+        """When a channel posted on one platform since `since`, newest first."""
+        rows = self._con.execute(
+            "SELECT published_at FROM publications WHERE channel_key = ? AND platform = ? AND published_at >= ?"
+            " ORDER BY published_at DESC", (channel_key, platform, _iso(since)))
+        return [datetime.fromisoformat(r[0]) for r in rows]
+
     def recently_published(self, channel_key: str, days: int) -> set[str]:
         since = _iso(_now() - timedelta(days=days))
         rows = self._con.execute(

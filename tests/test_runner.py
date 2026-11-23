@@ -1,5 +1,5 @@
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -197,3 +197,23 @@ def test_cycle_waits_out_the_window_then_posts(bot, monkeypatch):
     report = bot.run_cycle()
     assert report.published == 1
     assert bot.storage.get_meta_json("bot_state", {})["state"] == "running"
+
+
+def test_facebook_daily_limit_spreads_posts(bot):
+    bot.platforms["facebook"] = FakePlatform("facebook")
+    bot.tuning = Tuning(post_delay_seconds=0, shabbat_enabled=False, facebook_posts_per_day=3)
+    add_channel(bot)
+    bot.reload()
+    bot.run_cycle()
+    bot.run_cycle()  # second round right away: Facebook must wait 8 hours, Telegram posts again
+    assert len(bot.platforms["facebook"].posts) == 1 and len(bot.platforms["telegram"].posts) == 2
+
+    old = datetime.now(timezone.utc) - timedelta(hours=9)
+    bot.storage._con.execute("UPDATE publications SET published_at = ? WHERE platform = 'facebook'", (old.isoformat(),))
+    bot.storage._con.commit()
+    bot.run_cycle()
+    assert len(bot.platforms["facebook"].posts) == 2
+
+    bot.tuning = Tuning(post_delay_seconds=0, shabbat_enabled=False, facebook_posts_per_day=0)
+    bot.run_cycle()
+    assert len(bot.platforms["facebook"].posts) == 3  # 0 = no limit

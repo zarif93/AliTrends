@@ -247,9 +247,21 @@ class Bot:
         platform = self.platforms.get(target.platform)
         return bool(platform and platform.available())
 
+    def _within_daily_limit(self, channel: Channel, target: Target) -> bool:
+        """Facebook pages get at most N posts a day, spread out: one per 24h/N. Too many got the pages shut down."""
+        per_day = self.tuning.facebook_posts_per_day
+        if target.platform != "facebook" or per_day <= 0:
+            return True
+        now = _utcnow()
+        times = self.storage.publication_times(channel.key, target.platform, now - timedelta(days=1))
+        if len(times) >= per_day or (times and now - times[0] < timedelta(days=1) / per_day):
+            log.info("%s [facebook]: daily limit of %d posts, skipping this round", channel.key, per_day)
+            return False
+        return True
+
     def _process(self, channel: Channel, report: CycleReport, product: Product | None = None) -> bool:
         market = channel.market
-        targets = [t for t in channel.live_targets if self._usable(t)]
+        targets = [t for t in channel.live_targets if self._usable(t) and self._within_daily_limit(channel, t)]
         if not targets:
             report.skipped += 1
             return False
